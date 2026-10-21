@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/* Offbeat design tokens (BUILD_PROMPT §2). The app is dark-only by design. */
+@theme {
+  --color-ink: #10110f;
+  --color-ivory: #f6f4ec;
+  --color-citron: #e8f55a;
+  --color-card: #1b1c19;
+  --color-raised: #262724;
+  --color-muted: #a3a29a;
+  --color-line: rgb(246 244 236 / 0.1);
+
+  --font-display: var(--font-unbounded), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 24px;
+}
+
+html {
+  background: var(--color-ink);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-ivory);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Visible focus ring on every interactive element. */
+:focus-visible {
+  outline: 2px solid var(--color-citron);
+  outline-offset: 3px;
+}
+
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Bottom sheet entrance; skipped for people who prefer reduced motion. */
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+.sheet-in {
+  animation: sheet-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet-in {
+    animation: none;
+  }
+}

@@ -1,0 +1,204 @@
+{
+ "_note": "Fictional sample restaurants for the planner's optional dinner stop. Costs are rough sample estimates per person, not quotes, and no table is reserved.",
+ "restaurants": [
+  {
+   "id": "kaapi-kosha",
+   "name": "Kaapi & Kosha",
+   "cityId": "bengaluru-in",
+   "area": "Indiranagar",
+   "lat": 12.97854,
+   "lng": 77.6412,
+   "costPerPerson": 1500,
+   "currency": "INR",
+   "opens": "12:00",
+   "closes": "23:30",
+   "tags": [
+    "cafe",
+    "south indian"
+   ],
+   "image": "/images/events/food-cafe.jpg"
+  },
+  {
+   "id": "toast-tamarind",
+   "name": "Toast & Tamarind",
+   "cityId": "bengaluru-in",
+   "area": "Indiranagar",
+   "lat": 12.976,
+   "lng": 77.644,
+   "costPerPerson": 1200,
+   "currency": "INR",
+   "opens": "08:00",
+   "closes": "22:30",
+   "tags": [
+    "cafe",
+    "brunch"
+   ],
+   "image": "/images/events/food-bistro.jpg"
+  },
+  {
+   "id": "ragi-republic",
+   "name": "Ragi Republic",
+   "cityId": "bengaluru-in",
+   "area": "Indiranagar",
+   "lat": 12.9712,
+   "lng": 77.6405,
+   "costPerPerson": 900,
+   "currency": "INR",
+   "opens": "11:00",
+   "closes": "23:00",
+   "tags": [
+    "karnataka",
+    "millets"
+   ],
+   "image": "/images/events/food-cafe.jpg"
+  },
+  {
+   "id": "sundown-biryani",
+   "name": "Sundown Biryani Co.",
+   "cityId": "bengaluru-in",
+   "area": "Koramangala",
+   "lat": 12.9345,
+   "lng": 77.625,
+   "costPerPerson": 1100,
+   "currency": "INR",
+   "opens": "12:00",
+   "closes": "23:45",
+   "tags": [
+    "biryani",
+    "late night"
+   ],
+   "image": "/images/events/food-biryani.jpg"
+  },
+  {
+   "id": "vidyarthi-corner",
+   "name": "Corner Dosa House",
+   "cityId": "bengaluru-in",
+   "area": "Jayanagar",
+   "lat": 12.9265,
+   "lng": 77.5845,
+   "costPerPerson": 400,
+   "currency": "INR",
+   "opens": "07:00",
+   "closes": "22:00",
+   "tags": [
+    "dosa",
+    "quick"
+   ],
+   "image": "/images/events/food-cafe.jpg"
+  },
+  {
+   "id": "hsr-noodle-bar",
+   "name": "HSR Noodle Bar",
+   "cityId": "bengaluru-in",
+   "area": "HSR Layout",
+   "lat": 12.9125,
+   "lng": 77.6425,
+   "costPerPerson": 800,
+   "currency": "INR",
+   "opens": "12:00",
+   "closes": "23:00",
+   "tags": [
+    "noodles"
+   ],
+   "image": "/images/events/food-noodles.jpg"
+  },
+  {
+   "id": "towpath-kitchen",
+   "name": "Towpath Kitchen",
+   "cityId": "london-gb",
+   "area": "King's Cross",
+   "lat": 51.5355,
+   "lng": -0.1245,
+   "costPerPerson": 28,
+   "currency": "GBP",
+   "opens": "11:00",
+   "closes": "23:00",
+   "tags": [
+    "british",
+    "small plates"
+   ],
+   "image": "/images/events/food-bistro.jpg"
+  },
+  {
+   "id": "mare-street-pho",
+   "name": "Mare Street Pho",
+   "cityId": "london-gb",
+   "area": "Hackney",
+   "lat": 51.5445,
+   "lng": -0.056,
+   "costPerPerson": 16,
+   "currency": "GBP",
+   "opens": "12:00",
+   "closes": "22:30",
+   "tags": [
+    "vietnamese"
+   ],
+   "image": "/images/events/food-noodles.jpg"
+  },
+  {
+   "id": "rye-lane-grill",
+   "name": "Rye Lane Grill",
+   "cityId": "london-gb",
+   "area": "Peckham",
+   "lat": 51.47,
+   "lng": -0.069,
+   "costPerPerson": 22,
+   "currency": "GBP",
+   "opens": "12:00",
+   "closes": "23:00",
+   "tags": [
+    "grill"
+   ],
+   "image": "/images/events/food-bistro.jpg"
+  },
+  {
+   "id": "franklin-st-pizza",
+   "name": "Franklin St Pizza",
+   "cityId": "new-york-us",
+   "area": "Greenpoint, Brooklyn",
+   "lat": 40.731,
+   "lng": -73.9555,
+   "costPerPerson": 24,
+   "currency": "USD",
+   "opens": "11:30",
+   "closes": "23:30",
+   "tags": [
+    "pizza"
+   ],
+   "image": "/images/events/food-pizza.jpg"
+  },
+  {
+   "id": "orchard-noodles",
+   "name": "Orchard Noodles",
+   "cityId": "new-york-us",
+   "area": "Lower East Side",
+   "lat": 40.72,
+   "lng": -73.989,
+   "costPerPerson": 20,
+   "currency": "USD",
+   "opens": "12:00",
+   "closes": "02:00",
+   "tags": [
+    "noodles",
+    "late night"
+   ],
+   "image": "/images/events/food-noodles.jpg"
+  },
+  {
+   "id": "bedford-bistro",
+   "name": "Bedford Bistro",
+   "cityId": "new-york-us",
+   "area": "Williamsburg, Brooklyn",
+   "lat": 40.715,
+   "lng": -73.96,
+   "costPerPerson": 45,
+   "currency": "USD",
+   "opens": "17:00",
+   "closes": "23:00",
+   "tags": [
+    "bistro"
+   ],
+   "image": "/images/events/food-bistro.jpg"
+  }
+ ]
+}
