@@ -9,40 +9,34 @@
  * Positions are compared within a query only, never raw affinity across queries.
  */
 import "server-only";
-import mappingsJson from "../../../data/qloo-mappings.json";
 import type { OfferEvent } from "@/lib/events";
+import * as users from "./db/users";
 import { QlooUnavailable, insightsEntities, insightsTags } from "./qloo";
-import { store } from "./store";
 
 export type Interest = { id: string; name: string; type: string; image?: string; detail?: string };
 export type InterestNote = { text: string };
 export type TasteProfile = { interests: Interest[]; notes: InterestNote[]; skipped?: boolean; updatedAt?: string };
 
-const key = (uid: string) => `user:${uid}:taste`;
-export const getTaste = async (uid: string): Promise<TasteProfile> => (await store().get<TasteProfile>(key(uid))) ?? { interests: [], notes: [] };
-export async function saveTaste(uid: string, t: TasteProfile) {
-  await store().set(key(uid), { ...t, updatedAt: new Date().toISOString() });
-  if (t.interests.length) await store().sadd("idx:taste-users", uid);
-  else await store().srem("idx:taste-users", uid);
+export const MAX_INTERESTS = users.MAX_ANCHORS;
+
+export async function getTaste(uid: string): Promise<TasteProfile> {
+  const t = await users.getTaste(uid);
+  return { interests: t.anchors, notes: t.notes, ...(t.skipped ? { skipped: true } : {}), ...(t.updatedAt ? { updatedAt: t.updatedAt } : {}) };
 }
 
-type MappingEntry =
-  | { match: "direct" | "approximate"; qlooId: string; qlooName: string; qlooType: string; note: string; ref: { name: string; type: string; relation?: string } }
-  | { match: "unmatched"; note: string; ref: { name: string; type: string } };
-const MAP = mappingsJson as unknown as { refs: Record<string, MappingEntry>; byEvent: Record<string, string[]> };
+/** Saves interests (max 10, enforced in the repository) and notes. */
+export async function saveTaste(uid: string, t: TasteProfile) {
+  await users.saveTaste(uid, { anchors: t.interests, notes: t.notes, skipped: t.skipped });
+}
 
 export type EventMapping = { qlooId: string; qlooName: string; qlooType: string; match: "direct" | "approximate"; note: string; relation?: string };
 
-/** Mappings for an event. Organizer events use their stored mappings (if any). */
+/** An event's Qloo links (event_qloo_links), loaded with the event. */
 export function mappingsFor(e: Pick<OfferEvent, "id"> & { qlooMappings?: EventMapping[] }): EventMapping[] {
-  if (e.qlooMappings) return e.qlooMappings;
-  return (MAP.byEvent[e.id] ?? [])
-    .map((k) => MAP.refs[k])
-    .filter((m): m is Extract<MappingEntry, { qlooId: string }> => !!m && m.match !== "unmatched")
-    .map((m) => ({ qlooId: m.qlooId, qlooName: m.qlooName, qlooType: m.qlooType, match: m.match, note: m.note, relation: m.ref.relation }));
+  return e.qlooMappings ?? [];
 }
 
-export type TasteReason = { text: string; basis: "film" | "artist" | "tag"; approximate: boolean };
+export type TasteReason = { text: string; basis: "film" | "artist" | "tag"; approximate: boolean; refId: string };
 export type TasteRanking = {
   status: "ranked" | "no-interests" | "unavailable" | "no-coverage";
   /** eventId → position (0 = most relevant). Only ranked events appear. */
@@ -106,7 +100,7 @@ export async function rankByTaste(interests: Interest[], events: (OfferEvent & {
             type === "movie"
               ? `Screens ${ent.name}${who ? `, which Qloo links to your interest in ${who}` : ""}`
               : `For fans of ${ent.name}${who ? `, whom Qloo links to ${who}` : ""} (approximate: the artist isn't performing)`;
-          offer(eventId, pct(i, entities.length), { text, basis: type === "movie" ? "film" : "artist", approximate: m?.match === "approximate" });
+          offer(eventId, pct(i, entities.length), { text, basis: type === "movie" ? "film" : "artist", approximate: m?.match === "approximate", refId: ent.entity_id });
         }
       });
     } catch (e) {
@@ -122,7 +116,7 @@ export async function rankByTaste(interests: Interest[], events: (OfferEvent & {
         const id = t.tag_id ?? t.id ?? "";
         const m = mapInfo.get(id);
         for (const eventId of byType.tag.get(id) ?? []) {
-          offer(eventId, pct(i, tags.length), { text: `Tagged “${(m?.qlooName ?? t.name).trim()}”, a style Qloo associates with your interests`, basis: "tag", approximate: m?.match === "approximate" });
+          offer(eventId, pct(i, tags.length), { text: `Tagged “${(m?.qlooName ?? t.name).trim()}”, a style Qloo associates with your interests`, basis: "tag", approximate: m?.match === "approximate", refId: id });
         }
       });
     } catch (e) {

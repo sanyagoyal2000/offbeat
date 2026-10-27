@@ -47,10 +47,10 @@ describe("reservations", () => {
   it("rejects past sessions and over-quantity requests", async () => {
     const e = (await getEvent(EVENT))!;
     const past = e.sessions[0];
-    await expect(createReservation("u2", { eventId: EVENT, sessionId: past.id, tierId: "t1", quantity: 1, idempotencyKey: "past-key-0001" })).rejects.toThrow(/started/);
+    await expect(createReservation("u2", { eventId: EVENT, sessionId: past.id, tierId: past.tiers[0].id, quantity: 1, idempotencyKey: "past-key-0001" })).rejects.toThrow(/started/);
     const { s } = await firstSession();
     const other = e.sessions.find((x) => x.start > s.start)!;
-    await expect(createReservation("u2", { eventId: EVENT, sessionId: other.id, tierId: "t1", quantity: 10, idempotencyKey: "big-key-00001" })).rejects.toThrow(/left/);
+    await expect(createReservation("u2", { eventId: EVENT, sessionId: other.id, tierId: other.tiers[0].id, quantity: 10, idempotencyKey: "big-key-00001" })).rejects.toThrow(/left/);
   });
 
   it("keeps saved events across reads (refresh-safe)", async () => {

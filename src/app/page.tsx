@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRightIcon, SparklesIcon, UsersIcon, StarIcon } from "@/components/icons";
-import { EventCard } from "@/components/EventCard";
+import { EventCard, eventCardHref } from "@/components/EventCard";
 import { HomeFilters } from "@/components/home/HomeFilters";
 import { SaveSearchButton } from "@/components/home/SaveSearchButton";
 import { PromoSlot } from "@/components/promo/PromoSlot";
@@ -14,6 +14,7 @@ import { currentUid, exploreLocation } from "@/lib/server/identity";
 import { savedIds } from "@/lib/server/saved";
 import { getTaste } from "@/lib/server/taste";
 import { pickPromo } from "@/lib/server/experiments";
+import { titleLabPicks } from "@/lib/server/titleLab";
 import { filmsInCity } from "@/lib/server/movies";
 import { Poster } from "@/components/Poster";
 
@@ -32,6 +33,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   // Films have their own rail and page; keep the main grid for other experiences unless asked.
   const showFilmsInGrid = !!(params.category === "Movies" || params.kw.length || films.length === 0);
   const gridOffers = showFilmsInGrid ? result.offers : result.offers.filter((o) => o.event.category !== "Movies");
+  const offerById = new Map(gridOffers.map((o) => [o.event.id, o]));
+  const titles = await titleLabPicks(uid, taste.interests, gridOffers.map((o) => o.event), (e) => eventCardHref(offerById.get(e.id)!, returnTo));
 
   const describe = [
     params.kw.length && `“${params.kw.join(" ")}”`,
@@ -184,7 +187,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {gridOffers.map((o, i) => (
               <li key={o.event.id}>
-                <EventCard offer={o} saved={saved.has(o.event.id)} reason={result.taste.reasons.get(o.event.id)?.text} priority={i < 3} returnTo={returnTo} />
+                <EventCard offer={o} saved={saved.has(o.event.id)} reason={result.taste.reasons.get(o.event.id)?.text} priority={i < 3} returnTo={returnTo} variant={titles.get(o.event.id)} />
               </li>
             ))}
           </ul>

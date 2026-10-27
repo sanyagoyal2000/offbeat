@@ -1,6 +1,6 @@
 /**
- * Organizer workspace: identity (cookie-based, no accounts), event editing with inventory
- * consistency, publication, and proposals to matching wishes.
+ * Organizer workspace: the signed-in organization, event editing with inventory consistency,
+ * publication, and proposals to matching wishes.
  */
 import "server-only";
 import { cookies } from "next/headers";
@@ -11,9 +11,10 @@ import { LAYOUTS, sectionCapacity, sections } from "@/lib/seating";
 import { EventSchema, type OfferEvent, type Organizer } from "@/lib/events";
 import { cityById } from "@/lib/locations";
 import { addMinutesLocal } from "@/lib/tz";
-import { getEvent, getOrganizer, reservedKey, sampleOrganizers } from "./catalog";
+import { getEvent, reservedByTier, saveEventRecord, upsertOrganizer } from "./catalog";
+import { getOrganizerById } from "./db/catalog";
+import { newId } from "./db/client";
 import { accountForSession, SESSION_COOKIE } from "./auth";
-import { newId, putDoc, store } from "./store";
 import { attachProposal } from "./wishes";
 import { QlooUnavailable, searchEntities, searchTags } from "./qloo";
 import type { EventMapping } from "./taste";
@@ -55,9 +56,10 @@ export type CurrentOrg = Organizer & { isSample: boolean; account: { name: strin
 export async function currentOrg(): Promise<CurrentOrg | null> {
   const account = await accountForSession((await cookies()).get(SESSION_COOKIE)?.value);
   if (!account) return null;
-  const org = await getOrganizer(account.orgId);
-  if (!org) return null;
-  return { ...org, isSample: sampleOrganizers().some((o) => o.id === org.id), account: { name: account.name, email: account.email, demo: !!account.demo } };
+  const found = await getOrganizerById(account.orgId);
+  if (!found) return null;
+  const { isSample, ...org } = found;
+  return { ...org, isSample, account: { name: account.name, email: account.email, demo: !!account.demo } };
 }
 
 /** For organizer pages: redirect to sign-in when not signed in. */
@@ -68,8 +70,8 @@ export async function requireOrgPage(next = "/organizer"): Promise<CurrentOrg> {
 }
 
 export async function updateOrg(org: Organizer, patch: { name?: string; about?: string; cityId?: string }) {
-  const next = { ...org, ...patch };
-  await putDoc("organizers", next);
+  const next = { id: org.id, name: patch.name ?? org.name, about: patch.about ?? org.about, cityId: patch.cityId ?? org.cityId };
+  await upsertOrganizer(next);
   return next;
 }
 
@@ -150,13 +152,15 @@ export async function saveEvent(orgId: string, input: EventInput, existingId?: s
   const prev = existingId ? await getEvent(existingId) : null;
   if (existingId && (!prev || !canEdit(prev, orgId))) throw new InventoryConflict("You can only edit events your organization created.");
   const city = cityById(input.cityId)!;
-  const id = prev?.id ?? newId("evt");
+  const id = prev?.id ?? newId();
+  // Seats already reserved through bookings, per session → tier (sample pre-sales excluded).
+  const reservedNow = await reservedByTier(prev?.sessions.map((s) => s.id) ?? []);
 
   const sessions = [];
   for (const s of input.sessions) {
     const start = `${s.date}T${s.time}`;
     const old = s.id ? prev?.sessions.find((x) => x.id === s.id) : undefined;
-    const reserved = old ? ((await store().get<Record<string, number>>(reservedKey(old.id))) ?? {}) : {};
+    const reserved = old ? (reservedNow[old.id] ?? {}) : {};
     const hasReservations = Object.values(reserved).some((n) => n > 0);
     if (old && hasReservations && old.start !== start) throw new InventoryConflict(`The ${old.start.replace("T", " ")} session has reservations, so its time can't change. Cancel it and add a new date instead.`);
     const tiers = s.tiers.map((t) => {
@@ -165,17 +169,17 @@ export async function saveEvent(orgId: string, input: EventInput, existingId?: s
       if (t.capacity < r) throw new InventoryConflict(`“${t.name}” already has ${r} reserved, so capacity can't go below ${r}.`);
       const capacity = input.seatLayout && LAYOUTS[input.seatLayout] ? sectionCapacity(LAYOUTS[input.seatLayout], t.name) : t.capacity;
       if (capacity < r) throw new InventoryConflict(`“${t.name}” already has ${r} reserved, so capacity can't go below ${r}.`);
-      return { id: oldTier?.id ?? newId("t"), name: t.name, price: t.price, capacity, seedSold: 0 };
+      return { id: oldTier?.id ?? newId(), name: t.name, price: t.price, capacity, seedSold: 0 };
     });
     if (old && hasReservations) {
       for (const ot of old.tiers) if ((reserved[ot.id] ?? 0) > 0 && !tiers.some((t) => t.id === ot.id)) throw new InventoryConflict(`“${ot.name}” has reservations and can't be removed.`);
     }
-    sessions.push({ id: old?.id ?? newId("ses"), start, end: addMinutesLocal(start, input.durationMin), tiers, cancelled: s.cancelled || undefined });
+    sessions.push({ id: old?.id ?? newId(), start, end: addMinutesLocal(start, input.durationMin), tiers, cancelled: s.cancelled || undefined });
   }
   if (prev) {
     for (const os of prev.sessions) {
       if (sessions.some((s) => s.id === os.id)) continue;
-      const reserved = (await store().get<Record<string, number>>(reservedKey(os.id))) ?? {};
+      const reserved = reservedNow[os.id] ?? {};
       if (Object.values(reserved).some((n) => n > 0)) throw new InventoryConflict(`The ${os.start.replace("T", " ")} session has reservations and can't be deleted. Mark it cancelled instead.`);
     }
   }
@@ -192,7 +196,7 @@ export async function saveEvent(orgId: string, input: EventInput, existingId?: s
     source: "organizer",
     sessions,
   });
-  await putDoc("events", event);
+  await saveEventRecord(event);
   let proposals;
   if (event.status === "published" && event.proposedForCluster && prev?.status !== "published") {
     const minPrice = Math.min(...event.sessions.flatMap((s) => s.tiers.map((t) => t.price)));

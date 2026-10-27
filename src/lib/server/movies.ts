@@ -1,14 +1,16 @@
 /** Group cinema events by film for the movie pages. */
 import "server-only";
-import filmsJson from "../../../data/films.json";
+import { cache } from "react";
 import type { OfferEvent, SoldMap } from "@/lib/events";
 import { remaining } from "@/lib/events";
 import { nowIn } from "@/lib/tz";
 import { bookingFee } from "@/lib/pricing";
 import { feeRuleFor, publishedEvents, soldMaps } from "./catalog";
+import { listFilms, type FilmInfo } from "./db/catalog";
 
-export type FilmInfo = { id: string; title: string; qlooName?: string; year: number; language: string; description: string | null; image: string | null; genres: string[]; qlooId: string | null };
-export const FILMS = (filmsJson as unknown as { films: Record<string, FilmInfo> }).films;
+export type { FilmInfo };
+/** Film facts (from Qloo, stored in the films table), by film id. */
+export const films = cache(() => listFilms());
 
 export type Showtime = { eventId: string; sessionId: string; start: string; left: number; capacity: number; fromPrice: number; fee: number; total: number };
 export type FilmListing = { film: FilmInfo; currency: string; cinemas: { event: OfferEvent; showtimes: Showtime[] }[]; nextStart: string | null; showCount: number };
@@ -16,6 +18,7 @@ export type FilmListing = { film: FilmInfo; currency: string; cinemas: { event: 
 export async function filmsInCity(cityId: string): Promise<FilmListing[]> {
   const events = (await publishedEvents(cityId)).filter((e) => e.category === "Movies" && e.film);
   const sold = await soldMaps(events);
+  const FILMS = await films();
   const byFilm = new Map<string, FilmListing>();
   for (const e of events) {
     const film = FILMS[e.film!.id];

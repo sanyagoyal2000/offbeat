@@ -18,9 +18,13 @@ export function AvailabilityBadge({ status, left }: { status: Offer["availabilit
   return <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${cls}`}>{text}</span>;
 }
 
-export function EventCard({ offer, saved, reason, priority = false, returnTo }: { offer: Offer; saved: boolean; reason?: string; priority?: boolean; returnTo?: string }) {
+export const eventCardHref = ({ event: e, session }: Offer, returnTo?: string) => `/events/${e.id}?session=${session.id}${returnTo ? `&back=${encodeURIComponent(returnTo)}` : ""}`;
+
+/** `variant`: a Title lab title + hook chosen for this visitor; its link logs the click before opening the event. */
+export function EventCard({ offer, saved, reason, priority = false, returnTo, variant }: { offer: Offer; saved: boolean; reason?: string; priority?: boolean; returnTo?: string; variant?: { title: string; hook: string; href: string } }) {
   const { event: e, session, fromPrice, fee } = offer;
-  const href = `/events/${e.id}?session=${session.id}${returnTo ? `&back=${encodeURIComponent(returnTo)}` : ""}`;
+  const href = eventCardHref(offer, returnTo);
+  const linkClass = "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none";
   const facts = factLabels(e).slice(0, 2);
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-[24px] border border-line bg-card">
@@ -40,10 +44,18 @@ export function EventCard({ offer, saved, reason, priority = false, returnTo }: 
           {e.category} <span className="font-medium normal-case tracking-normal text-muted">· {cardDetail(e)}</span>
         </p>
         <h3 className="font-display text-[16px] leading-snug">
-          <Link href={href} className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
-            {e.title}
-          </Link>
+          {variant ? (
+            // Plain anchor: a prefetching Link would log phantom clicks.
+            <a href={variant.href} className={linkClass}>
+              {variant.title}
+            </a>
+          ) : (
+            <Link href={href} className={linkClass}>
+              {e.title}
+            </Link>
+          )}
         </h3>
+        {variant && <p className="-mt-1 line-clamp-2 text-[13px] text-ivory/80">{variant.hook}</p>}
         <p className="tnum text-[13px] text-ivory/80">
           {formatDayTime(session.start)}
           {offer.sessionCount > 1 && <span className="text-muted"> · +{offer.sessionCount - 1} more date{offer.sessionCount > 2 ? "s" : ""}</span>}

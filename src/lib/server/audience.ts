@@ -5,10 +5,10 @@
  */
 import "server-only";
 import type { OfferEvent } from "@/lib/events";
-import { audienceOptInUids } from "./notifications";
+import { getConnected, saveConnected } from "./db/qloo";
+import { countOptedIn, optedInAnchorSets } from "./db/users";
 import { QlooUnavailable, insightsEntities } from "./qloo";
-import { getTaste, mappingsFor, type Interest } from "./taste";
-import { store } from "./store";
+import { mappingsFor, type Interest } from "./taste";
 
 export type AudienceEstimate = {
   status: "ok" | "no-mappings" | "unavailable" | "no-optins";
@@ -23,11 +23,12 @@ const TYPE_URN: Record<string, string> = { artist: "urn:entity:artist", movie: "
 
 export async function audienceFor(event: OfferEvent): Promise<AudienceEstimate> {
   const mappings = mappingsFor(event);
-  const uids = await audienceOptInUids();
-  if (!mappings.length) return { status: "no-mappings", optedIn: uids.length, connected: 0, connectedInterests: [], connectedIds: [], explanation: "This event has no Qloo-mapped references yet, so taste-based audiences can't be suggested. You can still promote to everyone exploring the city." };
-  if (!uids.length) return { status: "no-optins", optedIn: 0, connected: 0, connectedInterests: [], connectedIds: [], explanation: "No Offbeat visitors have opted in to audience counts yet." };
+  // One anonymous anchor set per opted-in visitor (no names, ids or contact details).
+  const [sets, optedIn] = await Promise.all([optedInAnchorSets(), countOptedIn()]);
+  const tastes = sets.map((x) => ({ t: { interests: x.anchors as Interest[] } }));
+  if (!mappings.length) return { status: "no-mappings", optedIn, connected: 0, connectedInterests: [], connectedIds: [], explanation: "This event has no Qloo-mapped references yet, so taste-based audiences can't be suggested. You can still promote to everyone exploring the city." };
+  if (!optedIn) return { status: "no-optins", optedIn: 0, connected: 0, connectedInterests: [], connectedIds: [], explanation: "No Offbeat visitors have opted in to audience counts yet." };
 
-  const tastes = await Promise.all(uids.map(async (u) => ({ uid: u, t: await getTaste(u) })));
   const byType = new Map<string, Interest[]>();
   for (const { t } of tastes) for (const i of t.interests) byType.set(i.type, [...(byType.get(i.type) ?? []).filter((x) => x.id !== i.id), i]);
 
@@ -48,24 +49,24 @@ export async function audienceFor(event: OfferEvent): Promise<AudienceEstimate> 
       entities.slice(0, Math.max(1, Math.ceil(entities.length / 2))).forEach((e) => connected.add(e.entity_id));
     }
   } catch (e) {
-    if (e instanceof QlooUnavailable) return { status: "unavailable", optedIn: uids.length, connected: 0, connectedInterests: [], connectedIds: [], explanation: "Qloo is unavailable right now, so taste-based audience estimates can't be computed." };
+    if (e instanceof QlooUnavailable) return { status: "unavailable", optedIn, connected: 0, connectedInterests: [], connectedIds: [], explanation: "Qloo is unavailable right now, so taste-based audience estimates can't be computed." };
     throw e;
   }
   const people = tastes.filter(({ t }) => t.interests.some((i) => connected.has(i.id)));
   const names = [...new Set(tastes.flatMap(({ t }) => t.interests).filter((i) => connected.has(i.id)).map((i) => i.name))].slice(0, 6);
-  await store().set(`audience:connected:${event.id}`, { at: Date.now(), ids: [...connected] });
+  await saveConnected(event.id, [...connected]);
   return {
     status: "ok",
-    optedIn: uids.length,
+    optedIn,
     connected: people.length,
     connectedInterests: names,
     connectedIds: [...connected],
-    explanation: `${people.length} of ${uids.length} opted-in Offbeat visitors have interests that Qloo ranks in the top half of connections to this event's references (${mappings.map((m) => m.qlooName).join(", ")}). Reach is limited to Offbeat's in-app promotion cards; Qloo provides cultural associations, not a contact list.`,
+    explanation: `${people.length} of ${optedIn} opted-in Offbeat visitors have interests that Qloo ranks in the top half of connections to this event's references (${mappings.map((m) => m.qlooName).join(", ")}). Reach is limited to Offbeat's in-app promotion cards; Qloo provides cultural associations, not a contact list.`,
   };
 }
 
 /** Cached connected-interest ids used to decide whether a visitor is in a "connected" audience. */
 export async function connectedIds(eventId: string): Promise<Set<string> | null> {
-  const c = await store().get<{ at: number; ids: string[] }>(`audience:connected:${eventId}`);
-  return c ? new Set(c.ids) : null;
+  const ids = await getConnected(eventId);
+  return ids ? new Set(ids) : null;
 }

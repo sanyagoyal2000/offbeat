@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
-import { SaveButton } from "@/components/SaveButton";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, type FormEvent } from "react";
 import { CATEGORIES, type Category } from "@/lib/categories";
 import { parseSearch } from "@/lib/searchParse";
 import { formatDayTime, formatMoney, formatClock } from "@/lib/tz";
@@ -59,7 +59,38 @@ type Revision = {
 
 const input = "mt-1 h-11 w-full rounded-[12px] border border-ivory/20 bg-ink px-3 text-[14px]";
 
-export function PlanAssistant({ city, today, areas, hasInventory, prefill }: { city: { id: string; name: string; currency: string }; today: string; areas: Area[]; hasInventory: boolean; prefill: { from?: string; to?: string } }) {
+const LAST_PLAN = "ob_last_plan";
+
+/** Saves one option as a plan (prices are recomputed on the server). */
+function SavePlanButton({ o, party, saved, onSaved }: { o: Option; party: number; saved: boolean; onSaved: () => void }) {
+  const [state, setState] = useState<"idle" | "busy" | "error">("idle");
+  return (
+    <button
+      type="button"
+      aria-pressed={saved}
+      disabled={saved || state === "busy"}
+      onClick={async () => {
+        setState("busy");
+        const res = await fetch("/api/plans", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ eventId: o.event.id, sessionId: o.sessionId, tierId: o.tier.id, party, dinner: o.dinner ? { restaurantId: o.dinner.restaurant.id, start: o.dinner.start } : null }),
+        }).catch(() => null);
+        if (res?.ok) {
+          setState("idle");
+          onSaved();
+        } else setState("error");
+      }}
+      className={`flex h-10 items-center rounded-full px-4 text-[13px] font-semibold ${saved ? "border border-citron text-citron" : "border border-ivory/25"}`}
+    >
+      {saved ? "Saved to your plans" : state === "busy" ? "Saving…" : state === "error" ? "Couldn't save, retry" : "Save plan"}
+    </button>
+  );
+}
+
+export function PlanAssistant({ city, today, areas, hasInventory, prefill, replanSession, savedSessionIds = [] }: { city: { id: string; name: string; currency: string }; today: string; areas: Area[]; hasInventory: boolean; prefill: { from?: string; to?: string }; replanSession?: string; savedSessionIds?: string[] }) {
+  const router = useRouter();
+  const [savedPlans, setSavedPlans] = useState(() => new Set(savedSessionIds));
   const [f, setF] = useState<Form>({ from: prefill.from ?? "", to: prefill.to ?? "", earliest: "", latest: "", area: "", maxKm: "", budget: "", mode: "per-person", party: 1, categories: [], keywords: "", dinner: false });
   const [describe, setDescribe] = useState("");
   const [rev, setRev] = useState<Revision>({});
@@ -99,12 +130,35 @@ export function PlanAssistant({ city, today, areas, hasInventory, prefill }: { c
       setResult(json);
       setRev(revision);
       if (note) setHistory((h) => [...h, note]);
+      try {
+        sessionStorage.setItem(LAST_PLAN, JSON.stringify({ cityId: city.id, f, rev: revision }));
+      } catch {}
       setState("idle");
     } catch (e) {
       setError((e as Error).message);
       setState("error");
     }
   };
+
+  // A booking from this plan sold out (real, not simulated): restore the last plan and run it again.
+  // The planner reads live sold counts, so the sold-out option drops out by itself.
+  const [pendingReplan, setPendingReplan] = useState<Revision | null>(null);
+  useEffect(() => {
+    if (!replanSession) return;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(LAST_PLAN) ?? "null") as { cityId: string; f: Form; rev: Revision } | null;
+      if (saved && saved.cityId === city.id) {
+        setF(saved.f);
+        setPendingReplan({ ...saved.rev, pinSessionId: null });
+      }
+    } catch {}
+  }, [replanSession, city.id]);
+  useEffect(() => {
+    if (!pendingReplan) return;
+    setPendingReplan(null);
+    run(pendingReplan, "Your pick sold out while you were booking, so this plan uses live availability");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingReplan]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -287,9 +341,17 @@ export function PlanAssistant({ city, today, areas, hasInventory, prefill }: { c
                       </ul>
                     </details>
                     <div className="flex flex-wrap gap-2 border-t border-line px-4 py-3">
-                      <Link href={`/events/${o.event.id}/book?session=${o.sessionId}&qty=${f.party}`} className="flex h-10 items-center rounded-full bg-citron px-4 text-[13px] font-bold text-ink">Choose tickets</Link>
+                      <Link href={`/events/${o.event.id}/book?session=${o.sessionId}&qty=${f.party}&from=plan`} className="flex h-10 items-center rounded-full bg-citron px-4 text-[13px] font-bold text-ink">Choose tickets</Link>
                       <Link href={`/events/${o.event.id}?session=${o.sessionId}&back=/plan`} className="flex h-10 items-center rounded-full border border-ivory/25 px-4 text-[13px] font-semibold">View event</Link>
-                      <SaveButton eventId={o.event.id} title={o.event.title} initial={false} />
+                      <SavePlanButton
+                        o={o}
+                        party={f.party}
+                        saved={savedPlans.has(o.sessionId)}
+                        onSaved={() => {
+                          setSavedPlans((s) => new Set(s).add(o.sessionId));
+                          router.refresh();
+                        }}
+                      />
                     </div>
                     <div className="flex flex-wrap gap-1.5 border-t border-line px-4 py-3" role="group" aria-label={`Revise ${o.event.title}`}>
                       <span className="mr-1 self-center text-[12px] font-semibold text-muted">Revise:</span>

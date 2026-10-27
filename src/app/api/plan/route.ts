@@ -3,7 +3,7 @@ import { PlanRequestSchema } from "@/lib/planSchema";
 import { plan } from "@/lib/planner";
 import { nowIn } from "@/lib/tz";
 import { cityById } from "@/lib/locations";
-import { RESTAURANTS, feeRuleFor, publishedEvents, soldMaps } from "@/lib/server/catalog";
+import { feeRuleFor, publishedEvents, restaurantsIn, soldMaps } from "@/lib/server/catalog";
 import { currentUid, exploreLocation } from "@/lib/server/identity";
 import { getTaste, rankByTaste } from "@/lib/server/taste";
 
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const sold = await soldMaps(events);
   const taste = await getTaste(await currentUid());
   const ranking = taste.interests.length ? await rankByTaste(taste.interests, events) : null;
-  const result = plan(r, events, sold, feeRuleFor, RESTAURANTS, nowIn(loc.timezone), ranking?.status === "ranked" ? ranking.rank : undefined);
+  const result = plan(r, events, sold, feeRuleFor, await restaurantsIn(r.cityId), nowIn(loc.timezone), ranking?.status === "ranked" ? ranking.rank : undefined);
   return NextResponse.json({
     ...result,
     tasteUsed: ranking?.status === "ranked",

@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { AuthError, accountForSession, createSession, destroySession, signUp, verifyLogin } from "./auth";
-import { getDoc } from "./store";
+import { eq } from "drizzle-orm";
+import { db } from "./db/client";
+import { organizerAccounts, organizerSessions } from "./db/schema";
 
 const org = (id: string) => ({ id, name: "Test Org", cityId: "bengaluru-in", about: "" });
 
 describe("organizer accounts", () => {
   it("stores a salted hash, never the password", async () => {
     const a = await signUp({ name: "Asha", orgName: "Test Org", cityId: "bengaluru-in", email: "asha@example.com", password: "correct horse battery" }, org);
-    const stored = JSON.stringify(await getDoc("accounts", a.id));
+    const stored = JSON.stringify(await db().select().from(organizerAccounts).where(eq(organizerAccounts.id, a.id)));
     expect(stored).not.toContain("correct horse battery");
     expect(a.hash).toHaveLength(128);
     await expect(signUp({ name: "B", orgName: "X", cityId: "bengaluru-in", email: "ASHA@example.com", password: "another password1" }, org)).rejects.toBeInstanceOf(AuthError);
@@ -24,6 +26,8 @@ describe("organizer accounts", () => {
     const a = await signUp({ name: "Ravi", orgName: "Org", cityId: "bengaluru-in", email: "ravi@example.com", password: "long enough pw" }, org);
     const s = await createSession(a.id);
     expect((await accountForSession(s.token))?.id).toBe(a.id);
+    // Only a hash of the token is stored.
+    expect(JSON.stringify(await db().select().from(organizerSessions))).not.toContain(s.token);
     expect(await accountForSession("forged-token")).toBeNull();
     await destroySession(s.token);
     expect(await accountForSession(s.token)).toBeNull();

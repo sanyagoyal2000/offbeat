@@ -1,7 +1,8 @@
 /**
  * Server-side Qloo client.
  *
- * - Caches responses for 24 h (memory + store) keyed by path and parameters.
+ * - Caches responses for 24 h in the qloo_cache table (survives cold starts), keyed by path and
+ *   sorted parameters. Expired rows are deleted on read and by cleanupQlooCache().
  * - De-duplicates identical in-flight requests.
  * - Throttles to QLOO_RPS requests/second (default 4; the hackathon key allows 5).
  * - Stops calling once QLOO_MONTHLY_BUDGET calls have been made this month (default 8,000 of 10,000),
@@ -9,7 +10,7 @@
  * Callers must handle QlooUnavailable and fall back honestly.
  */
 import "server-only";
-import { store } from "./store";
+import * as cacheRepo from "./db/qloo";
 
 export class QlooUnavailable extends Error {}
 
@@ -22,9 +23,7 @@ const TIMEOUT_MS = 8000;
 
 export const qlooConfigured = () => Boolean(KEY);
 
-type CacheEntry = { at: number; body: unknown };
-const g = globalThis as unknown as { __qlooMem?: Map<string, CacheEntry>; __qlooInflight?: Map<string, Promise<unknown>>; __qlooNext?: number };
-const mem = (g.__qlooMem ??= new Map());
+const g = globalThis as unknown as { __qlooInflight?: Map<string, Promise<unknown>>; __qlooNext?: number };
 const inflight = (g.__qlooInflight ??= new Map());
 
 /** Space requests at least 1/RPS seconds apart across the process. */
@@ -35,16 +34,11 @@ async function throttle() {
   if (slot > now) await new Promise((r) => setTimeout(r, slot - now));
 }
 
-const monthKey = () => `qloo:usage:${new Date().toISOString().slice(0, 7)}`;
-
 export async function qlooUsage() {
-  return { used: (await store().get<number>(monthKey())) ?? 0, budget: MONTHLY_BUDGET, rps: RPS, configured: qlooConfigured() };
+  return { used: await cacheRepo.usageThisMonth(), budget: MONTHLY_BUDGET, rps: RPS, configured: qlooConfigured() };
 }
 
-async function countCall() {
-  const s = store();
-  await s.lock("qloo-usage", async () => s.set(monthKey(), ((await s.get<number>(monthKey())) ?? 0) + 1));
-}
+export const cleanupQlooCache = cacheRepo.cleanupQlooCache;
 
 export async function qlooGet<T>(path: string, params: Record<string, string | number | boolean | undefined>): Promise<T> {
   if (!KEY) throw new QlooUnavailable("Qloo isn't configured");
@@ -52,20 +46,16 @@ export async function qlooGet<T>(path: string, params: Record<string, string | n
   const qs = new URLSearchParams(Object.entries(clean).sort(([a], [b]) => a.localeCompare(b))).toString();
   const cacheKey = `qloo:${path}?${qs}`;
 
-  const hit = mem.get(cacheKey);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.body as T;
-  const stored = await store().get<CacheEntry>(cacheKey);
-  if (stored && Date.now() - stored.at < TTL_MS) {
-    mem.set(cacheKey, stored);
-    return stored.body as T;
-  }
+  if (inflight.has(cacheKey)) return inflight.get(cacheKey) as Promise<T>;
+  const stored = await cacheRepo.cacheGet<T>(cacheKey);
+  if (stored !== null) return stored;
   if (inflight.has(cacheKey)) return inflight.get(cacheKey) as Promise<T>;
 
   const p = (async () => {
     const { used } = await qlooUsage();
     if (used >= MONTHLY_BUDGET) throw new QlooUnavailable("Monthly Qloo budget reached");
     await throttle();
-    await countCall();
+    await cacheRepo.countCall();
     let res: Response;
     try {
       res = await fetch(`${BASE}${path}?${qs}`, { headers: { "X-Api-Key": KEY, accept: "application/json" }, signal: AbortSignal.timeout(TIMEOUT_MS) });
@@ -75,9 +65,9 @@ export async function qlooGet<T>(path: string, params: Record<string, string | n
     if (res.status === 429) throw new QlooUnavailable("Qloo rate limit reached");
     if (!res.ok) throw new QlooUnavailable(`Qloo returned ${res.status}`);
     const body = (await res.json()) as T;
-    const entry = { at: Date.now(), body };
-    mem.set(cacheKey, entry);
-    await store().set(cacheKey, entry);
+    await cacheRepo.cacheSet(cacheKey, body, TTL_MS);
+    // Occasionally sweep expired rows so the table doesn't grow without bound.
+    if (Math.random() < 0.02) await cacheRepo.cleanupQlooCache().catch(() => 0);
     return body;
   })().finally(() => inflight.delete(cacheKey));
   inflight.set(cacheKey, p);
@@ -100,6 +90,8 @@ export type QlooEntity = {
     description?: string;
   };
   disambiguation?: string;
+  tags?: { id?: string; name?: string }[];
+  popularity?: number;
   query?: { affinity?: number; explainability?: { "signal.interests.entities"?: { entity_id: string; score: number }[] } };
 };
 export type QlooTag = { tag_id: string; id?: string; name: string; subtype?: string; query?: { affinity?: number } };

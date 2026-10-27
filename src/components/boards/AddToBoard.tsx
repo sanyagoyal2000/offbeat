@@ -7,13 +7,20 @@ import { Dialog } from "../Dialog";
 import { NewBoardForm } from "./BoardActions";
 
 /** Add an event to one of your boards, or start a new board with it. */
-export function AddToBoard({ eventId, boards }: { eventId: string; boards: { id: string; name: string; has: boolean }[] }) {
-  const [open, setOpen] = useState(false);
+export function AddToBoard({ eventId, boards, signedIn, autoOpen = false }: { eventId: string; boards: { id: string; name: string; has: boolean }[]; signedIn: boolean; autoOpen?: boolean }) {
+  const [open, setOpen] = useState(signedIn && autoOpen);
   const [added, setAdded] = useState<Record<string, boolean>>(Object.fromEntries(boards.map((b) => [b.id, b.has])));
   const add = async (id: string) => {
     const res = await fetch(`/api/boards/${id}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "add", eventId }) });
     if (res.ok) setAdded((a) => ({ ...a, [id]: true }));
   };
+  // Guests log in first, then come back to this event with the dialog open.
+  if (!signedIn)
+    return (
+      <Link href={`/login?next=${encodeURIComponent(`/events/${eventId}?plan=1`)}`} className="flex h-12 items-center gap-2 rounded-full border border-citron/40 px-5 text-[15px] font-semibold text-citron">
+        <UsersIcon size={19} /> Plan with friends
+      </Link>
+    );
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" className="flex h-12 items-center gap-2 rounded-full border border-citron/40 px-5 text-[15px] font-semibold text-citron">

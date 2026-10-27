@@ -64,9 +64,9 @@ export function BoardItemAction({ boardId, eventId, action, label }: { boardId: 
   );
 }
 
-export function MyConstraintsForm({ boardId, initial, currency }: { boardId: string; initial: { name?: string; budgetMax?: number; from?: string; to?: string }; currency: string }) {
+export function MyConstraintsForm({ boardId, initial, currency }: { boardId: string; initial: { budgetMax?: number; from?: string; to?: string }; currency: string }) {
   const router = useRouter();
-  const [f, setF] = useState({ name: initial.name ?? "", budget: initial.budgetMax?.toString() ?? "", from: initial.from ?? "", to: initial.to ?? "" });
+  const [f, setF] = useState({ budget: initial.budgetMax?.toString() ?? "", from: initial.from ?? "", to: initial.to ?? "" });
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -74,7 +74,7 @@ export function MyConstraintsForm({ boardId, initial, currency }: { boardId: str
     try {
       await post(boardId, {
         action: "me",
-        me: { name: f.name || undefined, budgetMax: f.budget ? Number(f.budget) : undefined, from: f.from || undefined, to: f.to || undefined },
+        me: { budgetMax: f.budget ? Number(f.budget) : undefined, from: f.from || undefined, to: f.to || undefined },
       });
       setState("saved");
       router.refresh();
@@ -85,8 +85,7 @@ export function MyConstraintsForm({ boardId, initial, currency }: { boardId: str
   const input = "mt-1 h-11 w-full rounded-[12px] border border-ivory/20 bg-ink px-3 text-[14px]";
   return (
     <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
-      <label className="text-[13px] font-semibold">Your name (optional)<input className={input} value={f.name} maxLength={40} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
-      <label className="text-[13px] font-semibold">Max per person ({currency}, incl. fees)<input className={input} inputMode="decimal" value={f.budget} onChange={(e) => setF({ ...f, budget: e.target.value.replace(/[^\d.]/g, "") })} /></label>
+      <label className="text-[13px] font-semibold sm:col-span-2">Max per person ({currency}, incl. fees)<input className={input} inputMode="decimal" value={f.budget} onChange={(e) => setF({ ...f, budget: e.target.value.replace(/[^\d.]/g, "") })} /></label>
       <label className="text-[13px] font-semibold">Free from<input type="date" className={input} value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></label>
       <label className="text-[13px] font-semibold">Free until<input type="date" className={input} value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></label>
       <div className="flex items-center gap-3 sm:col-span-2">
@@ -94,6 +93,57 @@ export function MyConstraintsForm({ boardId, initial, currency }: { boardId: str
         <span aria-live="polite" className="text-[13px] text-muted">{state === "saved" ? "Saved. Everyone on the board sees it." : state === "error" ? "Couldn't save, try again." : "All fields are optional."}</span>
       </div>
     </form>
+  );
+}
+
+/** Join a board you were invited to (signed-in accounts only). */
+export function JoinBoard({ boardId }: { boardId: string }) {
+  const router = useRouter();
+  const [state, setState] = useState<"idle" | "busy" | "error">("idle");
+  return (
+    <span className="flex flex-col items-start gap-1">
+      <button
+        type="button"
+        disabled={state === "busy"}
+        onClick={async () => {
+          setState("busy");
+          try {
+            await post(boardId, { action: "join" });
+            router.refresh();
+            setState("idle");
+          } catch {
+            setState("error");
+          }
+        }}
+        className="flex h-11 items-center gap-1.5 rounded-full bg-citron px-5 text-[14px] font-bold text-ink disabled:opacity-60"
+      >
+        <UsersIcon size={16} /> {state === "busy" ? "Joining…" : "Join this board"}
+      </button>
+      {state === "error" && <span role="alert" className="text-[12px] text-citron">Couldn&apos;t join. Try again.</span>}
+    </span>
+  );
+}
+
+export function LeaveBoard({ boardId }: { boardId: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          await post(boardId, { action: "leave" });
+          router.refresh();
+        } finally {
+          setBusy(false);
+        }
+      }}
+      className="h-10 rounded-full px-1 text-[13px] font-semibold text-muted underline underline-offset-4"
+    >
+      {busy ? "Leaving…" : "Leave this board"}
+    </button>
   );
 }
 

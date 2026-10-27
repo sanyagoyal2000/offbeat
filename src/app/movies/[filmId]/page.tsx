@@ -4,12 +4,12 @@ import { BackLink } from "@/components/BackLink";
 import { Poster } from "@/components/Poster";
 import { formatClock, formatDay, formatMoney } from "@/lib/tz";
 import { exploreLocation } from "@/lib/server/identity";
-import { FILMS, filmsInCity } from "@/lib/server/movies";
+import { films, filmsInCity } from "@/lib/server/movies";
 
 export default async function FilmPage({ params, searchParams }: { params: Promise<{ filmId: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const { filmId } = await params;
   const sp = await searchParams;
-  const film = FILMS[filmId];
+  const film = (await films())[filmId];
   if (!film) notFound();
   const loc = await exploreLocation();
   const listing = (await filmsInCity(loc.id)).find((f) => f.film.id === filmId);

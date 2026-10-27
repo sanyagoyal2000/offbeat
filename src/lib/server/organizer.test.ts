@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { upsertOrganizer } from "./catalog";
 import { EventInputSchema, InventoryConflict, saveEvent, type EventInput } from "./organizer";
 import { createReservation } from "./reservations";
 import { createWish, myWishes } from "./wishes";
@@ -22,6 +23,10 @@ const input = (over: Partial<EventInput> = {}): EventInput =>
   });
 
 describe("organizer events", () => {
+  beforeAll(async () => {
+    for (const id of ["org_test", "someone-else"]) await upsertOrganizer({ id, name: `Test ${id}`, cityId: "bengaluru-in", about: "" });
+  });
+
   it("validates category-specific fields", () => {
     expect(EventInputSchema.safeParse({ ...input(), category: "Treks & outdoors", show: undefined }).success).toBe(false);
   });

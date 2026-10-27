@@ -1,5 +1,6 @@
 "use client";
 
+import { ReplanNotice } from "./ReplanNotice";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TicketPrice } from "@/components/TicketPrice";
@@ -15,12 +16,15 @@ export function BookingFlow({
   feeLabel,
   initialSessionId,
   initialQty,
+  fromPlan = false,
 }: {
   event: { id: string; title: string; currency: string; timezone: string };
   sessions: BookingSession[];
   feeLabel: string;
   initialSessionId?: string;
   initialQty: number;
+  /** Opened from the planner: a sell-out offers to re-plan. */
+  fromPlan?: boolean;
 }) {
   const router = useRouter();
   const [sessions, setSessions] = useState(initialSessions);
@@ -34,6 +38,7 @@ export function BookingFlow({
   const [step, setStep] = useState<Step>("select");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [soldOutSession, setSoldOutSession] = useState<string | null>(null);
   // One key per review: a double tap or retry can't create two reservations.
   const idemKey = useRef<string>("");
   const heading = useRef<HTMLHeadingElement>(null);
@@ -82,8 +87,9 @@ export function BookingFlow({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ eventId: event.id, sessionId: session.id, tierId: tier.id, quantity: qty, idempotencyKey: idemKey.current }),
       });
-      const body = (await res.json()) as { reservation?: { id: string }; error?: string };
+      const body = (await res.json()) as { reservation?: { id: string }; error?: string; code?: string };
       if (!res.ok || !body.reservation) {
+        setSoldOutSession(body.code === "sold-out" || body.code === "insufficient" ? session.id : null);
         setError(body.error ?? "Couldn't reserve. Please try again.");
         await refresh();
         setStep("select");
@@ -136,6 +142,7 @@ export function BookingFlow({
     <div className="mt-5 flex flex-col gap-5">
       <h2 ref={heading} tabIndex={-1} className="sr-only">Choose tickets</h2>
       {error && <p role="alert" className="rounded-[16px] border border-citron/40 p-3 text-[14px] text-citron">{error} Availability has been refreshed.</p>}
+      {fromPlan && soldOutSession && <ReplanNotice sessionId={soldOutSession} />}
       <section aria-labelledby="date-h">
         <h3 id="date-h" className="text-[15px] font-bold">1. Date</h3>
         <label className="sr-only" htmlFor="session">Session</label>

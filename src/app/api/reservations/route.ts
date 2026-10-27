@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { currentUid } from "@/lib/server/identity";
 import { ReservationError, ReservationRequestSchema, createReservation, listReservations } from "@/lib/server/reservations";
+import { recordTitleLab } from "@/lib/server/titleLab";
 
 export async function GET() {
   return NextResponse.json({ reservations: await listReservations(await currentUid()) });
@@ -19,6 +20,14 @@ export async function POST(req: Request) {
   } catch {}
   try {
     const { reservation, duplicate } = await createReservation(await currentUid(), parsed.data, promo);
+    // Title lab: count a hold as a booking for the card variant this visitor clicked.
+    const tlRaw = (await cookies()).get("ob_tl")?.value;
+    if (!duplicate && tlRaw) {
+      try {
+        const t = JSON.parse(decodeURIComponent(tlRaw)) as { eventId: string; variantId: string; clusterId: string };
+        if (t.eventId === parsed.data.eventId) await recordTitleLab("booking", t.eventId, t.variantId, t.clusterId);
+      } catch {}
+    }
     return NextResponse.json({ reservation, duplicate }, { status: duplicate ? 200 : 201 });
   } catch (e) {
     if (e instanceof ReservationError) return NextResponse.json({ error: e.message, code: e.code }, { status: e.code === "not-found" ? 404 : 409 });

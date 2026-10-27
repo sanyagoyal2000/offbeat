@@ -11,7 +11,8 @@ export default async function OrganizerLogin({ searchParams }: { searchParams: P
   const sp = await searchParams;
   const next = safeNext(sp.next);
   if (await currentOrg()) redirect(next);
-  const demos = sampleOrganizers().filter((o) => o.cityId === "bengaluru-in").slice(0, 3).concat(sampleOrganizers().filter((o) => o.cityId !== "bengaluru-in").slice(0, 2));
+  const samples = await sampleOrganizers();
+  const demos = samples.filter((o) => o.cityId === "bengaluru-in").slice(0, 3).concat(samples.filter((o) => o.cityId !== "bengaluru-in").slice(0, 2));
   await Promise.all(demos.map(ensureDemoAccount));
   return (
     <main className="mx-auto max-w-md px-4 pt-8 sm:px-6">

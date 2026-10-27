@@ -2,18 +2,17 @@ import { notFound } from "next/navigation";
 import { BackLink } from "@/components/BackLink";
 import { EventEditor } from "@/components/organizer/EventEditor";
 import { CITIES } from "@/lib/locations";
-import { getEvent, reservedKey } from "@/lib/server/catalog";
+import { getEvent, reservedByTier } from "@/lib/server/catalog";
 import { eventToInput } from "@/lib/server/eventForm";
 import { canEdit, requireOrgPage } from "@/lib/server/organizer";
-import { store } from "@/lib/server/store";
 
 export default async function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const org = await requireOrgPage(`/organizer/events/${id}/edit`);
   const e = await getEvent(id);
   if (!e || e.organizerId !== org.id) notFound();
-  const reserved = await store().mget<Record<string, number>>(e.sessions.map((s) => reservedKey(s.id)));
-  const bySession = Object.fromEntries(e.sessions.map((s, i) => [s.id, Object.values(reserved[i] ?? {}).reduce((a, b) => a + b, 0)]));
+  const reserved = await reservedByTier(e.sessions.map((s) => s.id));
+  const bySession = Object.fromEntries(e.sessions.map((s) => [s.id, Object.values(reserved[s.id] ?? {}).reduce((a, b) => a + b, 0)]));
   const editable = canEdit(e, org.id);
   return (
     <main className="mx-auto max-w-4xl px-4 pt-4 sm:px-6">

@@ -1,5 +1,6 @@
 "use client";
 
+import { ReplanNotice } from "./ReplanNotice";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SeatMap, bestAvailable, type SectionPrice } from "@/components/SeatMap";
@@ -18,6 +19,7 @@ export function SeatBookingFlow({
   feeLabel,
   initialSessionId,
   initialQty,
+  fromPlan = false,
 }: {
   event: { id: string; title: string; currency: string; venue: string; isMovie: boolean };
   layoutId: string;
@@ -26,6 +28,8 @@ export function SeatBookingFlow({
   feeLabel: string;
   initialSessionId?: string;
   initialQty: number;
+  /** Opened from the planner: a sell-out offers to re-plan. */
+  fromPlan?: boolean;
 }) {
   const router = useRouter();
   const layout = LAYOUTS[layoutId];
@@ -40,6 +44,7 @@ export function SeatBookingFlow({
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [soldOutSession, setSoldOutSession] = useState<string | null>(null);
   const idemKey = useRef("");
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), [step]);
@@ -94,8 +99,9 @@ export function SeatBookingFlow({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ eventId: event.id, sessionId: session.id, tierId: tier.id, quantity: seats.length, seats, idempotencyKey: idemKey.current }),
       });
-      const body = (await res.json()) as { reservation?: { id: string }; error?: string };
+      const body = (await res.json()) as { reservation?: { id: string }; error?: string; code?: string };
       if (!res.ok || !body.reservation) {
+        setSoldOutSession(body.code === "sold-out" || body.code === "insufficient" ? session.id : null);
         setError(body.error ?? "Couldn't reserve those seats.");
         await loadSession(session.id);
         setStep("select");
@@ -143,6 +149,7 @@ export function SeatBookingFlow({
     <div className="mt-5 flex flex-col gap-5">
       <h2 ref={heading} tabIndex={-1} className="sr-only">Choose seats</h2>
       {error && <p role="alert" className="rounded-[16px] border border-citron/40 p-3 text-[14px] text-citron">{error} The seat map has been refreshed.</p>}
+      {fromPlan && soldOutSession && <ReplanNotice sessionId={soldOutSession} />}
 
       <section aria-labelledby="when-h">
         <h3 id="when-h" className="text-[15px] font-bold">1. {event.isMovie ? "Date and showtime" : "Date and time"}</h3>

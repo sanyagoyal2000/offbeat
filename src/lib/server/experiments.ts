@@ -14,28 +14,16 @@ import { track } from "./analytics";
 import { connectedIds } from "./audience";
 import { getEvent, publishedEvents, soldMaps } from "./catalog";
 import { llmJson, llmProvider } from "./llm";
-import { getDoc, listDocs, newId, putDoc, store } from "./store";
+import * as repo from "./db/experiments";
+import { newId } from "./db/client";
 import type { Interest } from "./taste";
 
 export const PRIOR_WEIGHT = 20; // pseudo-impressions the model prediction is worth
 export const VARIANT_COUNT = 4;
 
 export type Variant = { id: string; headline: string; body: string; predictedCtr: number; predictionSource: "llm" | "heuristic" };
-export type Counts = { impressions: number; clicks: number; reservations: number };
-export type Experiment = {
-  id: string;
-  eventId: string;
-  orgId: string;
-  audience: { id: string; kind: "city" | "connected"; label: string; cityId: string };
-  status: "draft" | "running" | "stopped";
-  createdAt: string;
-  startedAt?: string;
-  copySource: "llm" | "template";
-  variants: Variant[];
-  real: Record<string, Counts>;
-  simulated: Record<string, Counts> & { _meta?: never };
-  simulation?: { runs: number; visitors: number; trueCtr: Record<string, number>; allocation: { step: number; shares: number[] }[] };
-};
+export type Counts = repo.Counts;
+export type Experiment = repo.ExperimentDoc;
 
 const zero = (): Counts => ({ impressions: 0, clicks: 0, reservations: 0 });
 
@@ -108,7 +96,7 @@ export const copyProvider = () => llmProvider();
 export async function createExperiment(orgId: string, e: OfferEvent, audience: Experiment["audience"]): Promise<Experiment> {
   const { variants, source } = await draftVariants(e);
   const exp: Experiment = {
-    id: newId("exp"),
+    id: newId(),
     eventId: e.id,
     orgId,
     audience,
@@ -119,39 +107,24 @@ export async function createExperiment(orgId: string, e: OfferEvent, audience: E
     real: Object.fromEntries(variants.map((v) => [v.id, zero()])),
     simulated: Object.fromEntries(variants.map((v) => [v.id, zero()])),
   };
-  await putDoc("experiments", exp);
+  await repo.putExperiment(exp);
   return exp;
 }
 
-export const getExperiment = (id: string) => getDoc<Experiment>("experiments", id);
-export async function experimentsForEvent(eventId: string) {
-  return (await listDocs<Experiment>("experiments")).filter((x) => x.eventId === eventId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
+export const getExperiment = (id: string) => repo.getExperiment(id);
+export const experimentsForEvent = (eventId: string) => repo.listExperiments({ eventId });
 
 export async function setStatus(id: string, orgId: string, status: "running" | "stopped") {
-  return store().lock(`exp:${id}`, async () => {
-    const x = await getExperiment(id);
-    if (!x || x.orgId !== orgId) return null;
-    // Keep event and audience stable while comparing wording: only one running test per event.
-    if (status === "running") {
-      const others = (await experimentsForEvent(x.eventId)).filter((o) => o.id !== id && o.status === "running");
-      for (const o of others) await putDoc("experiments", { ...o, status: "stopped" });
-    }
-    const next = { ...x, status, startedAt: status === "running" ? (x.startedAt ?? new Date().toISOString()) : x.startedAt };
-    await putDoc("experiments", next);
-    return next;
-  });
+  const x = await getExperiment(id);
+  if (!x || x.orgId !== orgId) return null;
+  // Keep event and audience stable while comparing wording: only one running test per event.
+  if (status === "running") for (const o of await experimentsForEvent(x.eventId)) if (o.id !== id && o.status === "running") await repo.putExperiment({ ...o, status: "stopped" });
+  const next = { ...x, status, startedAt: status === "running" ? (x.startedAt ?? new Date().toISOString()) : x.startedAt };
+  await repo.putExperiment(next);
+  return next;
 }
 
-async function bump(id: string, variantId: string, kind: keyof Counts, source: "real" | "simulated", by = 1) {
-  await store().lock(`exp:${id}`, async () => {
-    const x = await getExperiment(id);
-    if (!x) return;
-    const bucket = source === "real" ? x.real : x.simulated;
-    bucket[variantId] = { ...(bucket[variantId] ?? zero()), [kind]: (bucket[variantId]?.[kind] ?? 0) + by };
-    await putDoc("experiments", x);
-  });
-}
+const bump = (id: string, variantId: string, kind: keyof Counts, source: "real" | "simulated", by = 1) => repo.bumpCounter(id, variantId, kind, source, by);
 
 const arms = (x: Experiment, source: "real" | "simulated"): Arm[] =>
   x.variants.map((v) => ({ id: v.id, predictedCtr: v.predictedCtr, impressions: (source === "real" ? x.real : x.simulated)[v.id]?.impressions ?? 0, clicks: (source === "real" ? x.real : x.simulated)[v.id]?.clicks ?? 0 }));
@@ -170,7 +143,7 @@ export type PromoPick = {
 };
 
 export async function pickPromo(uid: string, cityId: string, interests: Interest[]): Promise<PromoPick | null> {
-  const running = (await listDocs<Experiment>("experiments")).filter((x) => x.status === "running" && x.audience.cityId === cityId);
+  const running = (await repo.listExperiments({ status: "running" })).filter((x) => x.audience.cityId === cityId);
   if (!running.length) return null;
   const events = new Map((await publishedEvents(cityId)).map((e) => [e.id, e]));
   const myIds = new Set(interests.map((i) => i.id));
@@ -224,7 +197,7 @@ export async function recordConversion(experimentId: string, variantId: string) 
 /* ── Simulation (synthetic, clearly separated) ───────────────────── */
 
 export async function simulate(id: string, orgId: string, visitors = 1000) {
-  return store().lock(`exp:${id}`, async () => {
+  {
     const x = await getExperiment(id);
     if (!x || x.orgId !== orgId) return null;
     const rng = seededRng(Date.now() % 2 ** 31);
@@ -244,9 +217,9 @@ export async function simulate(id: string, orgId: string, visitors = 1000) {
       if (i % Math.ceil(visitors / 10) === 0) allocation.push({ step: i, shares: x.variants.map((vv) => sim[vv.id].impressions / i) });
     }
     const next: Experiment = { ...x, simulated: sim, simulation: { runs: (x.simulation?.runs ?? 0) + 1, visitors, trueCtr, allocation } };
-    await putDoc("experiments", next);
+    await repo.putExperiment(next);
     return next;
-  });
+  }
 }
 
 export function experimentReport(x: Experiment, source: "real" | "simulated") {

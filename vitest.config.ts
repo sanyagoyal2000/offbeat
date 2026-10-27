@@ -8,5 +8,6 @@ export default defineConfig({
       "server-only": fileURLToPath(new URL("./test/server-only-stub.ts", import.meta.url)),
     },
   },
-  test: { include: ["src/**/*.test.ts"], setupFiles: ["./test/setup.ts"] },
+  // One local SQLite file (file:./test.db) shared by all files, so files run one at a time.
+  test: { include: ["src/**/*.test.ts"], globalSetup: ["./test/global-setup.ts"], setupFiles: ["./test/setup.ts"], fileParallelism: false },
 });

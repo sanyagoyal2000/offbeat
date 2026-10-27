@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next-*/
 /out/
 
 # production
@@ -41,3 +42,7 @@ yarn-error.log*
 next-env.d.ts
 !.env.example
 /data/runtime/
+
+# Test databases (Vitest)
+/test.db*
+/test.template.db*

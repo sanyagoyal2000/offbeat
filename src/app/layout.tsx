@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Unbounded } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
-import { exploreLocation } from "@/lib/server/identity";
+import { currentUser, exploreLocation } from "@/lib/server/identity";
 
 const unbounded = Unbounded({
   variable: "--font-unbounded",
@@ -31,12 +31,13 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const explore = await exploreLocation();
+  const [explore, user] = await Promise.all([exploreLocation(), currentUser().catch(() => null)]);
+  const account = user?.account ? { username: user.account.username, displayName: user.account.displayName } : null;
   return (
     <html lang="en" className={`${unbounded.variable} ${jakarta.variable}`}>
       <body>
         <div className="flex min-h-dvh flex-col">
-          <AppShell explore={explore}>{children}</AppShell>
+          <AppShell explore={explore} account={account}>{children}</AppShell>
         </div>
       </body>
     </html>

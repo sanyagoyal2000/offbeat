@@ -1,48 +1,20 @@
 /**
  * First-party interaction log for organizer reporting and promotion experiments.
- * `source` keeps real visitor activity apart from labelled simulation data.
+ * `source` keeps real visitor activity apart from labelled simulation data: real metrics
+ * always query is_simulated = 0.
  */
 import "server-only";
-import { store } from "./store";
+import * as repo from "./db/analytics";
+import { userIdFor } from "./db/users";
 
-export type MetricKind = "view" | "impression" | "click" | "save" | "reservation";
-export type Source = "real" | "simulated";
+export type MetricKind = repo.MetricKind;
+export type Source = repo.Source;
+export type InteractionEvent = repo.InteractionEvent;
 
-export type InteractionEvent = {
-  at: string;
-  kind: MetricKind;
-  eventId: string;
-  uid: string;
-  source: Source;
-  experimentId?: string;
-  variantId?: string;
-  audienceId?: string;
-  /** Probability the variant had of being shown when it was selected (for interpreting results). */
-  selectionProbability?: number;
-  reservationId?: string;
-};
-
-const countsKey = (eventId: string, source: Source) => `metrics:${source}:${eventId}`;
-const logKey = (eventId: string) => `metricslog:${eventId}`;
-const MAX_LOG = 2000;
-
-/** Increment aggregate counters and keep a bounded raw log per event. */
 export async function track(e: Omit<InteractionEvent, "at">) {
-  const s = store();
-  await s.lock(`metrics:${e.eventId}`, async () => {
-    const counts = (await s.get<Record<MetricKind, number>>(countsKey(e.eventId, e.source))) ?? ({} as Record<MetricKind, number>);
-    counts[e.kind] = (counts[e.kind] ?? 0) + 1;
-    await s.set(countsKey(e.eventId, e.source), counts);
-    const log = (await s.get<InteractionEvent[]>(logKey(e.eventId))) ?? [];
-    log.push({ ...e, at: new Date().toISOString() });
-    await s.set(logKey(e.eventId), log.slice(-MAX_LOG));
-  });
+  const { uid, ...rest } = e;
+  await repo.insertInteraction({ ...rest, userId: uid && e.source === "real" ? await userIdFor(uid) : null });
 }
 
-export async function metricsFor(eventId: string, source: Source = "real") {
-  return (await store().get<Partial<Record<MetricKind, number>>>(countsKey(eventId, source))) ?? {};
-}
-
-export async function interactionLog(eventId: string) {
-  return (await store().get<InteractionEvent[]>(logKey(eventId))) ?? [];
-}
+export const metricsFor = (eventId: string, source: Source = "real") => repo.countsByKind(eventId, source);
+export const interactionLog = (eventId: string) => repo.logFor(eventId);

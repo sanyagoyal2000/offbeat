@@ -4,20 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 import type { Location } from "@/lib/locations";
-import { HomeIcon, SparkleIcon, StarIcon, TicketIcon, UserIcon, BookmarkIcon, UsersIcon } from "./icons";
+import { HomeIcon, SparkleIcon, StarIcon, TicketIcon, UserIcon, UsersIcon } from "./icons";
 import { LocationPicker } from "./LocationPicker";
 
 type Icon = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
 const NAV: { href: string; label: string; Icon: Icon; match: (p: string) => boolean }[] = [
   { href: "/", label: "Explore", Icon: HomeIcon, match: (p) => p === "/" || p.startsWith("/events") || p.startsWith("/movies") },
   { href: "/friends", label: "Friends", Icon: UsersIcon, match: (p) => p.startsWith("/friends") || p.startsWith("/boards") },
-  { href: "/plan", label: "Plan", Icon: SparkleIcon, match: (p) => p.startsWith("/plan") },
-  { href: "/saved", label: "Saved", Icon: BookmarkIcon, match: (p) => p.startsWith("/saved") },
+  { href: "/plan", label: "Plan", Icon: SparkleIcon, match: (p) => p.startsWith("/plan") || p.startsWith("/saved") },
   { href: "/tickets", label: "Tickets", Icon: TicketIcon, match: (p) => p.startsWith("/tickets") },
   { href: "/wishes", label: "Wishes", Icon: StarIcon, match: (p) => p.startsWith("/wishes") },
 ];
 
-export function AppShell({ explore, children }: { explore: Location; children: ReactNode }) {
+export function AppShell({ explore, account, children }: { explore: Location; account: { username: string; displayName: string } | null; children: ReactNode }) {
   const path = usePathname();
   const organizer = path.startsWith("/organizer");
   return (
@@ -53,13 +52,18 @@ export function AppShell({ explore, children }: { explore: Location; children: R
           >
             {organizer ? "Back to Explore" : "For organizers"}
           </Link>
+          {!organizer && !account && (
+            <Link href={`/login?next=${encodeURIComponent(path)}`} className="ml-auto flex h-10 flex-none items-center rounded-full bg-citron px-4 text-[13px] font-bold text-ink sm:ml-0">
+              Log in
+            </Link>
+          )}
           <Link
             href="/profile"
-            aria-label="Profile and settings"
+            aria-label={account ? `Profile and settings (signed in as ${account.username})` : "Profile and settings"}
             aria-current={path.startsWith("/profile") || path.startsWith("/taste") ? "page" : undefined}
-            className="ml-auto flex size-10 flex-none items-center justify-center rounded-full bg-card text-ivory hover:text-citron sm:ml-0"
+            className={`flex size-10 flex-none items-center justify-center rounded-full hover:text-citron ${account ? "bg-citron/15 font-bold text-citron" : "bg-card text-ivory"} ${!organizer && !account ? "" : "ml-auto sm:ml-0"}`}
           >
-            <UserIcon size={20} />
+            {account ? <span aria-hidden="true" className="text-[15px] uppercase">{account.displayName.slice(0, 1)}</span> : <UserIcon size={20} />}
           </Link>
         </div>
       </header>
@@ -75,7 +79,7 @@ export function AppShell({ explore, children }: { explore: Location; children: R
           className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/95 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 backdrop-blur md:hidden"
         >
           <ul className="mx-auto flex max-w-md justify-between">
-            {NAV.filter((n) => n.href !== "/wishes").map(({ href, label, Icon, match }) => {
+            {NAV.map(({ href, label, Icon, match }) => {
               const on = match(path);
               return (
                 <li key={href} className="flex-1">

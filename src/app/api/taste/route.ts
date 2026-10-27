@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { currentUid } from "@/lib/server/identity";
+import { TooManyAnchors } from "@/lib/server/db/users";
 import { getTaste, saveTaste, vibeTags } from "@/lib/server/taste";
 
 const Profile = z.object({
@@ -17,6 +18,11 @@ export async function GET() {
 export async function PUT(req: Request) {
   const parsed = Profile.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid interests" }, { status: 400 });
-  await saveTaste(await currentUid(), parsed.data);
+  try {
+    await saveTaste(await currentUid(), parsed.data);
+  } catch (e) {
+    if (e instanceof TooManyAnchors) return NextResponse.json({ error: e.message }, { status: 400 });
+    throw e;
+  }
   return NextResponse.json({ ok: true, vibe: await vibeTags(parsed.data.interests) });
 }

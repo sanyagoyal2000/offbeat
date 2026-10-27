@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { OrgProfileForm, SignOutButton } from "@/components/organizer/AccountControls";
+import { TitleLabCard } from "@/components/organizer/TitleLab";
 import { CITIES, cityById } from "@/lib/locations";
 import { remaining } from "@/lib/events";
 import { formatDayTime, nowIn } from "@/lib/tz";
@@ -8,15 +9,21 @@ import { metricsFor } from "@/lib/server/analytics";
 import { allEvents, soldMaps } from "@/lib/server/catalog";
 import { orgEvents, requireOrgPage } from "@/lib/server/organizer";
 import { qlooUsage } from "@/lib/server/qloo";
+import { titleLabsFor } from "@/lib/server/titleLab";
 import { allWishes } from "@/lib/server/wishes";
 
-export default async function OrganizerHome() {
+export default async function OrganizerHome({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const { sim } = await searchParams;
   const org = await requireOrgPage("/organizer");
   const events = await orgEvents(org.id, await allEvents());
   const sold = await soldMaps(events);
   const metrics = await Promise.all(events.map((e) => metricsFor(e.id)));
   const clusters = clusterWishes(await allWishes(), { cityId: org.cityId, sinceDays: 30 }).slice(0, 3);
   const usage = await qlooUsage();
+  const published = events.filter((e) => e.status === "published");
+  const labs = await titleLabsFor(published.map((e) => e.id));
+  // Events with a lab first, then the rest in their usual order.
+  const labEvents = [...published].sort((a, b) => Number(labs.has(b.id)) - Number(labs.has(a.id)));
   const city = cityById(org.cityId);
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 pt-6 sm:px-6">
@@ -73,6 +80,23 @@ export default async function OrganizerHome() {
           </div>
         )}
         <p className="mt-2 text-[12px] text-muted">Seats sold include sample seed sales and demo reservations. No payments are processed.</p>
+      </section>
+
+      <section aria-labelledby="tl-h">
+        <h2 id="tl-h" className="text-[16px] font-bold">Title lab</h2>
+        <p className="mt-1 max-w-3xl text-[13px] text-muted">
+          Get five different card titles per event from AI test and learns which works best for your audience. 
+         
+        </p>
+        {published.length === 0 ? (
+          <p className="mt-2 text-[14px] text-muted">Publish an event to start a title lab.</p>
+        ) : (
+          <div className="mt-3 flex flex-col gap-3">
+            {labEvents.map((e) => (
+              <TitleLabCard key={e.id} event={e} lab={labs.get(e.id)} simulated={sim === e.id} toggleHref={sim === e.id ? `/organizer#tl-${e.id}` : `/organizer?sim=${encodeURIComponent(e.id)}#tl-${e.id}`} />
+            ))}
+          </div>
+        )}
       </section>
 
       <section aria-labelledby="dem-h">

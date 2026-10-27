@@ -5,7 +5,8 @@
 import "server-only";
 import { z } from "zod";
 import { CATEGORIES } from "@/lib/categories";
-import { newId, store } from "./store";
+import * as social from "./db/social";
+import * as users from "./db/users";
 
 export const PrefsSchema = z.object({
   optIn: z.boolean(),
@@ -19,31 +20,16 @@ export type Prefs = z.infer<typeof PrefsSchema>;
 export const DEFAULT_PREFS: Prefs = { optIn: false, audienceOptIn: false, categories: [], frequency: "weekly", quietHours: { from: "22:00", to: "08:00" } };
 
 export async function getPrefs(uid: string): Promise<Prefs> {
-  return (await store().get<Prefs>(`user:${uid}:prefs`)) ?? DEFAULT_PREFS;
+  const raw = await users.getPrefsJson(uid);
+  if (!raw) return DEFAULT_PREFS;
+  const parsed = PrefsSchema.safeParse(JSON.parse(raw));
+  return parsed.success ? parsed.data : DEFAULT_PREFS;
 }
 export async function savePrefs(uid: string, p: Prefs) {
-  await store().set(`user:${uid}:prefs`, p);
-  if (p.audienceOptIn) await store().sadd("idx:audience-optin", uid);
-  else await store().srem("idx:audience-optin", uid);
+  await users.savePrefsJson(uid, JSON.stringify(p), p.audienceOptIn);
 }
-export const audienceOptInUids = () => store().smembers("idx:audience-optin");
 
-export type Notification = { id: string; kind: "proposal" | "info"; title: string; body: string; href?: string; at: string; read: boolean };
-const key = (uid: string) => `user:${uid}:inbox`;
-
-export async function addNotification(uid: string, n: Omit<Notification, "id" | "at" | "read">) {
-  await store().lock(key(uid), async () => {
-    const list = (await store().get<Notification[]>(key(uid))) ?? [];
-    list.unshift({ ...n, id: newId("ntf"), at: new Date().toISOString(), read: false });
-    await store().set(key(uid), list.slice(0, 100));
-  });
-}
-export async function inbox(uid: string) {
-  return (await store().get<Notification[]>(key(uid))) ?? [];
-}
-export async function markAllRead(uid: string) {
-  await store().lock(key(uid), async () => {
-    const list = (await store().get<Notification[]>(key(uid))) ?? [];
-    await store().set(key(uid), list.map((n) => ({ ...n, read: true })));
-  });
-}
+export type Notification = social.Notification;
+export const addNotification = social.addNotification;
+export const inbox = (uid: string) => social.listNotifications(uid);
+export const markAllRead = social.markAllRead;

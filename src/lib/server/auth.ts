@@ -1,23 +1,21 @@
 /**
  * Organizer accounts: email + password, separate from the anonymous attendee identity.
- * Passwords are hashed with scrypt (random salt); sessions are random tokens stored server-side
- * and sent as an HTTP-only cookie. Login attempts are throttled per email.
+ * Passwords are hashed with scrypt (random salt); sessions are random tokens sent as an HTTP-only
+ * cookie and stored server-side only as a SHA-256 hash. Login attempts are throttled per email.
  */
 import "server-only";
-import { randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
-import { promisify } from "node:util";
 import { z } from "zod";
 import type { Organizer } from "@/lib/events";
-import { getDoc, newId, putDoc, store } from "./store";
+import * as repo from "./db/auth";
+import { hashPassword, newSessionToken, passwordMatches } from "./password";
 
-const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, keylen: number) => Promise<Buffer>;
 
 export const SESSION_COOKIE = "ob_org_session";
 export const SESSION_DAYS = 14;
 const MAX_ATTEMPTS = 5;
 const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 
-export type Account = { id: string; email: string; name: string; orgId: string; salt: string; hash: string; createdAt: string; demo?: boolean };
+export type Account = repo.Account;
 type Session = { token: string; accountId: string; expiresAt: number };
 
 export const SignupSchema = z.object({
@@ -29,65 +27,43 @@ export const SignupSchema = z.object({
 });
 export const LoginSchema = z.object({ email: z.string().trim().toLowerCase().email().max(120), password: z.string().min(1).max(200) });
 
-const emailKey = (email: string) => `account-email:${email.toLowerCase()}`;
-
-async function hashPassword(password: string, salt = randomBytes(16)) {
-  return { salt: salt.toString("hex"), hash: (await scrypt(password, salt, 64)).toString("hex") };
-}
-
-async function passwordMatches(a: Account, password: string) {
-  const { hash } = await hashPassword(password, Buffer.from(a.salt, "hex"));
-  const x = Buffer.from(hash, "hex");
-  const y = Buffer.from(a.hash, "hex");
-  return x.length === y.length && timingSafeEqual(x, y);
-}
-
 export class AuthError extends Error {}
 
 export async function signUp(input: z.infer<typeof SignupSchema>, org: (orgId: string) => Organizer): Promise<Account> {
-  return store().lock(emailKey(input.email), async () => {
-    if (await store().get<string>(emailKey(input.email))) throw new AuthError("An account with this email already exists. Sign in instead.");
-    const orgId = newId("org");
-    const { salt, hash } = await hashPassword(input.password);
-    const account: Account = { id: newId("acct"), email: input.email, name: input.name, orgId, salt, hash, createdAt: new Date().toISOString() };
-    await putDoc("organizers", org(orgId));
-    await putDoc("accounts", account);
-    await store().set(emailKey(input.email), account.id);
-    return account;
-  });
+  if (await repo.accountByEmail(input.email)) throw new AuthError("An account with this email already exists. Sign in instead.");
+  const { salt, hash } = await hashPassword(input.password);
+  const o = org(crypto.randomUUID());
+  const account = await repo.createAccountWithOrganizer({ email: input.email, name: input.name, salt, hash }, { id: o.id, name: o.name, cityId: o.cityId, about: o.about });
+  if (!account) throw new AuthError("An account with this email already exists. Sign in instead.");
+  return account;
 }
 
 export async function verifyLogin(email: string, password: string): Promise<Account> {
-  const key = `login-attempts:${email.toLowerCase()}`;
-  const attempts = ((await store().get<number[]>(key)) ?? []).filter((t) => Date.now() - t < ATTEMPT_WINDOW_MS);
-  if (attempts.length >= MAX_ATTEMPTS) throw new AuthError("Too many attempts. Wait 15 minutes and try again.");
-  const id = await store().get<string>(emailKey(email));
-  const account = id ? await getDoc<Account>("accounts", id) : null;
+  if ((await repo.recentAttempts(email, ATTEMPT_WINDOW_MS)) >= MAX_ATTEMPTS) throw new AuthError("Too many attempts. Wait 15 minutes and try again.");
+  const account = await repo.accountByEmail(email);
   // Hash even when the account doesn't exist so response time doesn't reveal which emails are registered.
   const ok = account ? await passwordMatches(account, password) : (await hashPassword(password), false);
   if (!ok || !account) {
-    await store().set(key, [...attempts, Date.now()]);
+    await repo.recordFailedAttempt(email);
     throw new AuthError("Email or password is incorrect.");
   }
-  await store().del(key);
+  await repo.clearAttempts(email);
   return account;
 }
 
 export async function createSession(accountId: string): Promise<Session> {
-  const s: Session = { token: randomBytes(32).toString("base64url"), accountId, expiresAt: Date.now() + SESSION_DAYS * 864e5 };
-  await store().set(`org-session:${s.token}`, s);
+  const s: Session = { token: newSessionToken(), accountId, expiresAt: Date.now() + SESSION_DAYS * 864e5 };
+  await repo.createSession(s.token, accountId, new Date(s.expiresAt));
   return s;
 }
 
 export async function accountForSession(token: string | undefined): Promise<Account | null> {
   if (!token || token.length > 100) return null;
-  const s = await store().get<Session>(`org-session:${token}`);
-  if (!s || s.expiresAt < Date.now()) return null;
-  return getDoc<Account>("accounts", s.accountId);
+  return repo.accountForToken(token);
 }
 
 export async function destroySession(token: string | undefined) {
-  if (token) await store().del(`org-session:${token}`);
+  if (token) await repo.deleteSession(token);
 }
 
 /** Demo accounts for the sample organizers, created on first use. Their credentials are shown on the sign-in page. */
@@ -96,12 +72,8 @@ export const demoEmail = (orgId: string) => `${orgId.replace(/^org-/, "")}@demo.
 
 export async function ensureDemoAccount(org: Organizer) {
   const email = demoEmail(org.id);
-  if (await store().get<string>(emailKey(email))) return;
-  await store().lock(emailKey(email), async () => {
-    if (await store().get<string>(emailKey(email))) return;
-    const { salt, hash } = await hashPassword(DEMO_PASSWORD);
-    const account: Account = { id: newId("acct"), email, name: `${org.name} (demo)`, orgId: org.id, salt, hash, createdAt: new Date().toISOString(), demo: true };
-    await putDoc("accounts", account);
-    await store().set(emailKey(email), account.id);
-  });
+  if (await repo.accountByEmail(email)) return;
+  const { salt, hash } = await hashPassword(DEMO_PASSWORD);
+  // A concurrent first visit may win the race; the unique email index makes that harmless.
+  await repo.createAccountWithOrganizer({ email, name: `${org.name} (demo)`, salt, hash, demo: true }, { existingId: org.id });
 }

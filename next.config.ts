@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   // Pin the workspace root; a stray lockfile in the home folder otherwise confuses Next.
   outputFileTracingRoot: __dirname,
   devIndicators: false,
+  // A second dev server or build in the same folder must use its own output dir, or it breaks the first.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   images: {
     // Film images returned by the Qloo API.
     remotePatterns: [

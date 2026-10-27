@@ -27,6 +27,7 @@ export default async function BookPage({ params, searchParams }: { params: Promi
           feeLabel={data.feeLabel}
           initialSessionId={sp.session}
           initialQty={Math.min(10, Math.max(1, Number(sp.qty) || 2))}
+          fromPlan={sp.from === "plan"}
         />
       ) : (
       <BookingFlow
@@ -35,6 +36,7 @@ export default async function BookPage({ params, searchParams }: { params: Promi
         feeLabel={data.feeLabel}
         initialSessionId={sp.session}
         initialQty={Math.min(10, Math.max(1, Number(sp.qty) || 1))}
+        fromPlan={sp.from === "plan"}
       />
       )}
     </main>

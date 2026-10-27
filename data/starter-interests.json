@@ -1,0 +1,462 @@
+{
+  "_note": "Seed input: well-known names per taste tab, used only when Qloo's popular list for an Indian city is thin or mostly non-Indian. Resolved to real Qloo IDs (exact name matches only) by scripts/resolve-starters.ts, which fills `resolved` and `misses`. Items without a Qloo ID are never shown. No places: Qloo's popular places are already local to each city.",
+  "names": {
+    "artist": [
+      "Arijit Singh",
+      "Prateek Kuhad",
+      "Anuv Jain",
+      "A.R. Rahman",
+      "Taylor Swift",
+      "Coldplay",
+      "BTS",
+      "Shreya Ghoshal",
+      "Diljit Dosanjh",
+      "The Local Train",
+      "Ed Sheeran",
+      "Ritviz"
+    ],
+    "movie": [
+      "3 Idiots",
+      "Kumbalangi Nights",
+      "Zindagi Na Milegi Dobara",
+      "The Lunchbox",
+      "RRR",
+      "Dangal",
+      "Gully Boy",
+      "Andhadhun",
+      "Dil Chahta Hai",
+      "Interstellar"
+    ],
+    "tv_show": [
+      "Panchayat",
+      "Kota Factory",
+      "Gullak",
+      "Scam 1992: The Harshad Mehta Story",
+      "Friends",
+      "Naruto",
+      "Sacred Games",
+      "The Family Man",
+      "Mirzapur",
+      "Breaking Bad"
+    ],
+    "book": [
+      "Harry Potter and the Sorcerer's Stone",
+      "The God of Small Things",
+      "The White Tiger",
+      "A Suitable Boy",
+      "Midnight's Children",
+      "Five Point Someone: What Not to Do at IIT",
+      "The Palace of Illusions",
+      "Wings of Fire",
+      "Sapiens: A Brief History of Humankind",
+      "Atomic Habits"
+    ],
+    "podcast": [
+      "The Ranveer Show",
+      "Figuring Out With Raj Shamani",
+      "Cyrus Says",
+      "The Musafir Stories",
+      "The Seen and the Unseen",
+      "Maed in India",
+      "Stuff You Should Know",
+      "Huberman Lab",
+      "The Joe Rogan Experience",
+      "Crime Junkie"
+    ]
+  },
+  "resolved": {
+    "artist": [
+      {
+        "id": "924C8504-4BD8-4615-AB2D-1C16880A8A62",
+        "name": "Arijit Singh",
+        "type": "artist",
+        "image": "https://images.qloo.com/i/924C8504-4BD8-4615-AB2D-1C16880A8A62-420x-auto.jpg",
+        "query": "Arijit Singh"
+      },
+      {
+        "id": "871AE4FF-0D03-45CE-A6E1-B255607FA3DD",
+        "name": "Prateek Kuhad",
+        "type": "artist",
+        "image": "https://images.qloo.com/i/871AE4FF-0D03-45CE-A6E1-B255607FA3DD-420x-auto.jpg",
+        "query": "Prateek Kuhad"
+      },
+      {
+        "id": "C8A2D53C-5353-4996-985C-868BB38762D9",
+        "name": "Anuv Jain",
+        "type": "artist",
+        "image": "https://images.qloo.com/i/C8A2D53C-5353-4996-985C-868BB38762D9-420x-auto.jpg",
+        "query": "Anuv Jain"
+      },
+      {
+        "id": "9986F595-C20E-4EBB-828F-55E7DEEBE448",
+        "name": "A.R. Rahman",
+        "type": "artist",
+        "image": "https://images.qloo.com/i/9986F595-C20E-4EBB-828F-55E7DEEBE448-420x-auto.jpg",
+        "query": "A.R. Rahman"
+      },
+      {
+        "id": "4BBEF799-A0C4-4110-AB01-39216993C312",
+        "name": "Taylor Swift",
+        "type": "artist",
+        "image": "https://images.qloo.com/i/4BBEF799-A0C4-4110-AB01-39216993C312-420x-auto.jpg",
+        "query": "Taylor Swift"
+      },
+      {
+        "id": "B6FA456F-B729-4700-B01F-E82AD3AC8ADA",
+        "name": "Coldplay",
+        "type": "artist",
+        "image": "https://images.qloo.com/i/B6FA456F-B729-4700-B01F-E82AD3AC8ADA-420x-auto.jpg",
+        "query": "Coldplay"
+      },
+      {
+        "id": "F347D506-CB6F-46FA-9A8B-AFBC31C71A1A",
+        "name": "BTS",
+        "type": "artist",
+        "image": "https://images.qloo.com/i/F347D506-CB6F-46FA-9A8B-AFBC31C71A1A-420x-auto.jpg",
+        "query": "BTS"
+      },
+      {
+        "id": "1B70567C-63F3-482C-9E6F-141FDD2B5746",
+        "name": "Shreya Ghoshal",
+        "type": "artist",
+        "image": "https://images.qloo.com/i/1B70567C-63F3-482C-9E6F-141FDD2B5746-420x-auto.jpg",
+        "query": "Shreya Ghoshal"
+      },
+      {
+        "id": "14021C69-7DC0-4AD1-80F6-AA1E65448792",
+        "name": "Diljit Dosanjh",
+        "type": "artist",
+        "image": "https://images.qloo.com/i/14021C69-7DC0-4AD1-80F6-AA1E65448792-420x-auto.jpg",
+        "query": "Diljit Dosanjh"
+      },
+      {
+        "id": "708E858B-D0E9-4606-A64B-47B890D46108",
+        "name": "The Local train",
+        "type": "artist",
+        "image": "https://images.qloo.com/i/708E858B-D0E9-4606-A64B-47B890D46108-420x-auto.jpg",
+        "query": "The Local Train"
+      },
+      {
+        "id": "058B79A3-49F5-4927-9AB6-DE713C706796",
+        "name": "Ed Sheeran",
+        "type": "artist",
+        "image": "https://images.qloo.com/i/058B79A3-49F5-4927-9AB6-DE713C706796-420x-auto.jpg",
+        "query": "Ed Sheeran"
+      },
+      {
+        "id": "CBF5E9DC-DD89-4FAB-966D-B2B24ED9FD8A",
+        "name": "Ritviz",
+        "type": "artist",
+        "image": "https://images.qloo.com/i/CBF5E9DC-DD89-4FAB-966D-B2B24ED9FD8A-420x-auto.jpg",
+        "query": "Ritviz"
+      }
+    ],
+    "movie": [
+      {
+        "id": "CE300FA0-0752-4DD3-B28F-FC4CFD2D8915",
+        "name": "3 Idiots",
+        "type": "movie",
+        "image": "https://images.qloo.com/i/CE300FA0-0752-4DD3-B28F-FC4CFD2D8915-420x-auto.jpg",
+        "query": "3 Idiots"
+      },
+      {
+        "id": "8FC322A3-3BD2-4800-AF27-FD89F0C30078",
+        "name": "Kumbalangi Nights",
+        "type": "movie",
+        "image": "https://images.qloo.com/i/8FC322A3-3BD2-4800-AF27-FD89F0C30078-420x-auto.jpg",
+        "query": "Kumbalangi Nights"
+      },
+      {
+        "id": "CBD74EFC-5F52-4844-8D56-9F8A7AFF97CC",
+        "name": "Zindagi Na Milegi Dobara",
+        "type": "movie",
+        "image": "https://images.qloo.com/i/CBD74EFC-5F52-4844-8D56-9F8A7AFF97CC-420x-auto.jpg",
+        "query": "Zindagi Na Milegi Dobara"
+      },
+      {
+        "id": "AD95721E-6D48-4489-87D3-478130928B76",
+        "name": "The Lunchbox",
+        "type": "movie",
+        "image": "https://images.qloo.com/i/AD95721E-6D48-4489-87D3-478130928B76-420x-auto.jpg",
+        "query": "The Lunchbox"
+      },
+      {
+        "id": "6D0B28D4-12FB-4113-BFAC-910271EF2D69",
+        "name": "RRR",
+        "type": "movie",
+        "image": "https://images.qloo.com/i/6D0B28D4-12FB-4113-BFAC-910271EF2D69-420x-auto.jpg",
+        "query": "RRR"
+      },
+      {
+        "id": "51413AE6-596D-4648-B0EF-A6BD3EE22590",
+        "name": "Dangal",
+        "type": "movie",
+        "image": "https://images.qloo.com/i/51413AE6-596D-4648-B0EF-A6BD3EE22590-420x-auto.jpg",
+        "query": "Dangal"
+      },
+      {
+        "id": "51A19BB0-E7C3-44AD-A740-22B0A05013BF",
+        "name": "Gully Boy",
+        "type": "movie",
+        "image": "https://images.qloo.com/i/51A19BB0-E7C3-44AD-A740-22B0A05013BF-420x-auto.jpg",
+        "query": "Gully Boy"
+      },
+      {
+        "id": "16AE167F-8537-4186-8214-C8478067EA9A",
+        "name": "Andhadhun",
+        "type": "movie",
+        "image": "https://images.qloo.com/i/16AE167F-8537-4186-8214-C8478067EA9A-420x-auto.jpg",
+        "query": "Andhadhun"
+      },
+      {
+        "id": "0DBDDCD5-4A3F-4A83-ADF7-0536D72D14AD",
+        "name": "Dil Chahta Hai",
+        "type": "movie",
+        "image": "https://images.qloo.com/i/0DBDDCD5-4A3F-4A83-ADF7-0536D72D14AD-420x-auto.jpg",
+        "query": "Dil Chahta Hai"
+      },
+      {
+        "id": "057DA9D9-399B-437E-8BCA-A80E499125EF",
+        "name": "Interstellar",
+        "type": "movie",
+        "image": "https://images.qloo.com/i/057DA9D9-399B-437E-8BCA-A80E499125EF-420x-auto.jpg",
+        "query": "Interstellar"
+      }
+    ],
+    "tv_show": [
+      {
+        "id": "7FA6EFBE-D261-4003-9EFA-4C4CA2BCEC07",
+        "name": "Panchayat",
+        "type": "tv_show",
+        "image": "https://images.qloo.com/i/7FA6EFBE-D261-4003-9EFA-4C4CA2BCEC07-420x-auto.jpg",
+        "query": "Panchayat"
+      },
+      {
+        "id": "8C99DCEC-2023-4D0C-8C94-F34C4CC3887A",
+        "name": "Kota Factory",
+        "type": "tv_show",
+        "image": "https://images.qloo.com/i/8C99DCEC-2023-4D0C-8C94-F34C4CC3887A-420x-auto.jpg",
+        "query": "Kota Factory"
+      },
+      {
+        "id": "6D6DBC9C-BA50-4011-8A12-72E03639EE01",
+        "name": "Gullak",
+        "type": "tv_show",
+        "image": "https://images.qloo.com/i/6D6DBC9C-BA50-4011-8A12-72E03639EE01-420x-auto.jpg",
+        "query": "Gullak"
+      },
+      {
+        "id": "14971BC4-8A75-4872-8A07-20083953AE9A",
+        "name": "Scam 1992: The Harshad Mehta Story",
+        "type": "tv_show",
+        "image": "https://images.qloo.com/i/14971BC4-8A75-4872-8A07-20083953AE9A-420x-auto.jpg",
+        "query": "Scam 1992: The Harshad Mehta Story"
+      },
+      {
+        "id": "4E62202B-3672-4B2E-A21F-C5EA4A0BA01F",
+        "name": "Friends",
+        "type": "tv_show",
+        "image": "https://images.qloo.com/i/4E62202B-3672-4B2E-A21F-C5EA4A0BA01F-420x-auto.jpg",
+        "query": "Friends"
+      },
+      {
+        "id": "5B3DE1AD-C1EC-4C83-9CD0-FDEDCB3BF649",
+        "name": "Naruto",
+        "type": "tv_show",
+        "image": "https://images.qloo.com/i/5B3DE1AD-C1EC-4C83-9CD0-FDEDCB3BF649-420x-auto.jpg",
+        "query": "Naruto"
+      },
+      {
+        "id": "F177EC76-D270-4E48-BB34-3180379CEA7A",
+        "name": "Sacred Games",
+        "type": "tv_show",
+        "image": "https://images.qloo.com/i/F177EC76-D270-4E48-BB34-3180379CEA7A-420x-auto.jpg",
+        "query": "Sacred Games"
+      },
+      {
+        "id": "67390174-9B13-49B7-B850-311BBFDD04D2",
+        "name": "The Family Man",
+        "type": "tv_show",
+        "image": "https://images.qloo.com/i/67390174-9B13-49B7-B850-311BBFDD04D2-420x-auto.jpg",
+        "query": "The Family Man"
+      },
+      {
+        "id": "3985CB37-06E2-47B4-9DBD-F1B853CDDE24",
+        "name": "Mirzapur",
+        "type": "tv_show",
+        "image": "https://images.qloo.com/i/3985CB37-06E2-47B4-9DBD-F1B853CDDE24-420x-auto.jpg",
+        "query": "Mirzapur"
+      },
+      {
+        "id": "D03D0913-A7B9-4C46-BFEB-958C1B3FA387",
+        "name": "Breaking Bad",
+        "type": "tv_show",
+        "image": "https://images.qloo.com/i/D03D0913-A7B9-4C46-BFEB-958C1B3FA387-420x-auto.jpg",
+        "query": "Breaking Bad"
+      }
+    ],
+    "book": [
+      {
+        "id": "F152B168-D93D-4444-A1AD-2B8653E223B0",
+        "name": "Harry Potter and the Sorcerer's Stone",
+        "type": "book",
+        "image": "https://images.qloo.com/i/F152B168-D93D-4444-A1AD-2B8653E223B0-420x-auto.jpg",
+        "query": "Harry Potter and the Sorcerer's Stone"
+      },
+      {
+        "id": "F74BAA1D-6C16-4EED-9BD7-304FB321A0A2",
+        "name": "The God of Small Things",
+        "type": "book",
+        "image": "https://images.qloo.com/i/F74BAA1D-6C16-4EED-9BD7-304FB321A0A2-420x-auto.jpg",
+        "query": "The God of Small Things"
+      },
+      {
+        "id": "F5785E2F-5D9E-4B4D-890E-484F95F111FF",
+        "name": "The White Tiger",
+        "type": "book",
+        "image": "https://images.qloo.com/i/F5785E2F-5D9E-4B4D-890E-484F95F111FF-420x-auto.jpg",
+        "query": "The White Tiger"
+      },
+      {
+        "id": "04C34FCE-E843-45BF-9FF4-B062564A9221",
+        "name": "Midnight’s Children",
+        "type": "book",
+        "image": "https://images.qloo.com/i/04C34FCE-E843-45BF-9FF4-B062564A9221-420x-auto.jpg",
+        "query": "Midnight's Children"
+      },
+      {
+        "id": "C6353088-09AA-4B92-A43D-48EAF374D216",
+        "name": "Five Point Someone: What Not to Do at IIT",
+        "type": "book",
+        "image": "https://images.qloo.com/i/C6353088-09AA-4B92-A43D-48EAF374D216-420x-auto.jpg",
+        "query": "Five Point Someone: What Not to Do at IIT"
+      },
+      {
+        "id": "E0FF55E0-1522-4438-A8FB-ADF0D62F7B5B",
+        "name": "The Palace of Illusions",
+        "type": "book",
+        "image": "https://images.qloo.com/i/E0FF55E0-1522-4438-A8FB-ADF0D62F7B5B-420x-auto.jpg",
+        "query": "The Palace of Illusions"
+      },
+      {
+        "id": "3EFA2FE7-4730-41E9-8D10-9706366322DC",
+        "name": "Wings of Fire",
+        "type": "book",
+        "image": "https://images.qloo.com/i/3EFA2FE7-4730-41E9-8D10-9706366322DC-420x-auto.jpg",
+        "query": "Wings of Fire"
+      },
+      {
+        "id": "DE0A1AFF-A2C1-4B08-A04C-6DFD7F781A08",
+        "name": "Sapiens: A Brief History of Humankind",
+        "type": "book",
+        "image": "https://images.qloo.com/i/DE0A1AFF-A2C1-4B08-A04C-6DFD7F781A08-420x-auto.jpg",
+        "query": "Sapiens: A Brief History of Humankind"
+      }
+    ],
+    "podcast": [
+      {
+        "id": "86BC43F3-A5EA-4EB2-942B-999F5AE69B4F",
+        "name": "Stuff You Should Know",
+        "type": "podcast",
+        "image": "https://images.qloo.com/i/86BC43F3-A5EA-4EB2-942B-999F5AE69B4F-420x-auto.jpg",
+        "query": "Stuff You Should Know"
+      },
+      {
+        "id": "10E08FC9-04BB-4827-9331-7E9ABE1F7DB6",
+        "name": "Huberman Lab",
+        "type": "podcast",
+        "image": "https://images.qloo.com/i/10E08FC9-04BB-4827-9331-7E9ABE1F7DB6-420x-auto.jpg",
+        "query": "Huberman Lab"
+      },
+      {
+        "id": "2BBC8913-13CA-47A3-BCD0-B48E70D6B005",
+        "name": "The Joe Rogan Experience",
+        "type": "podcast",
+        "image": "https://images.qloo.com/i/2BBC8913-13CA-47A3-BCD0-B48E70D6B005-420x-auto.jpg",
+        "query": "The Joe Rogan Experience"
+      },
+      {
+        "id": "A543F312-1893-4330-8125-7441966EF9EE",
+        "name": "Crime Junkie",
+        "type": "podcast",
+        "image": "https://images.qloo.com/i/A543F312-1893-4330-8125-7441966EF9EE-420x-auto.jpg",
+        "query": "Crime Junkie"
+      }
+    ]
+  },
+  "misses": [
+    {
+      "type": "book",
+      "query": "A Suitable Boy",
+      "candidates": [
+        "A Suitable Boy (A Bridge of Leaves, #1)",
+        "A Suitable Boy, Vol. 1",
+        "A Suitable Boy, Vol. 2"
+      ]
+    },
+    {
+      "type": "book",
+      "query": "Atomic Habits",
+      "candidates": [
+        "Atomic Habits: An Easy &amp; Proven Way to Build Good Habits &amp; Break Bad Ones",
+        "Atomic Habits Journal: A Daily Motivational Atomic Habits Journal &amp; Planner For Habits Tracking To Guide You Achieve Your Goal",
+        "Atomic Habits / I Will Teach You To Be Rich / Mindset / The One Thing"
+      ]
+    },
+    {
+      "type": "podcast",
+      "query": "The Ranveer Show",
+      "candidates": [
+        "Adam Carolla Show",
+        "Shawn Ryan Show",
+        "Smash Boom Best: A funny, smart debate show for kids and family"
+      ]
+    },
+    {
+      "type": "podcast",
+      "query": "Figuring Out With Raj Shamani",
+      "candidates": [
+        "3 and Out with John Middlekauff",
+        "Listen Out Loud with The Loud House",
+        "Time:Out With Troyce"
+      ]
+    },
+    {
+      "type": "podcast",
+      "query": "Cyrus Says",
+      "candidates": [
+        "Cara Says It All",
+        "Sorry We're Cyrus",
+        "Says Who?"
+      ]
+    },
+    {
+      "type": "podcast",
+      "query": "The Musafir Stories",
+      "candidates": [
+        "Beautiful Stories From Anonymous People",
+        "Mohr Stories",
+        "What If World - Stories for Kids"
+      ]
+    },
+    {
+      "type": "podcast",
+      "query": "The Seen and the Unseen",
+      "candidates": [
+        "Last Seen",
+        "Never Seen It with Kyle Ayers",
+        "Have You Seen This Man?"
+      ]
+    },
+    {
+      "type": "podcast",
+      "query": "Maed in India",
+      "candidates": [
+        "Indiana Jones In Character",
+        "Indiana Jones Minute",
+        "Indianapolis Football Podcast"
+      ]
+    }
+  ],
+  "resolvedAt": "2026-10-23T14:08:55.844Z"
+}

@@ -1,19 +1,36 @@
 import Link from "next/link";
 import { LocationPicker } from "@/components/LocationPicker";
-import { currentUid, exploreLocation, homeLocation } from "@/lib/server/identity";
+import { LogOutButton } from "@/components/account/UserAuthForm";
+import { currentUser, exploreLocation, homeLocation } from "@/lib/server/identity";
 import { getPrefs, inbox } from "@/lib/server/notifications";
 import { getTaste } from "@/lib/server/taste";
-import { store } from "@/lib/server/store";
 import { PrefsForm, MarkRead } from "./PrefsForm";
 
 export default async function ProfilePage() {
-  const uid = await currentUid();
+  const { uid, account } = await currentUser();
   const [explore, home, taste, prefs, notes] = await Promise.all([exploreLocation(), homeLocation(), getTaste(uid), getPrefs(uid), inbox(uid)]);
   const unread = notes.filter((n) => !n.read).length;
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-5 px-4 pt-6 sm:px-6">
       <h1 className="font-display text-[24px]">Profile and settings</h1>
-      <p className="text-[13px] text-muted">No account needed. Settings are tied to this browser.{store().mode === "memory" ? " This deployment doesn't store data persistently." : ""}</p>
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-line bg-card p-5" aria-labelledby="acct-h">
+        <div>
+          <h2 id="acct-h" className="text-[16px] font-bold">Account</h2>
+          {account ? (
+            <p className="text-[14px] text-ivory/80">Signed in as <span className="font-semibold text-ivory">{account.displayName}</span> <span className="text-muted">@{account.username}</span></p>
+          ) : (
+            <p className="text-[14px] text-ivory/80">You&apos;re browsing as a guest. Your settings are tied to this browser. Create an account to plan with friends; your data comes with you.</p>
+          )}
+        </div>
+        {account ? (
+          <LogOutButton />
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <Link href="/login?next=/profile" className="flex h-11 items-center rounded-full bg-citron px-5 text-[14px] font-bold text-ink">Log in</Link>
+            <Link href="/signup?next=/profile" className="flex h-11 items-center rounded-full border border-ivory/25 px-5 text-[14px] font-semibold">Create an account</Link>
+          </div>
+        )}
+      </section>
 
       <section className="rounded-[24px] border border-line bg-card p-5" aria-labelledby="inbox-h">
         <div className="flex items-center justify-between">

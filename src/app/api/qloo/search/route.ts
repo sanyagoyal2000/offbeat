@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { ENTITY_TYPES, QlooUnavailable, disambiguate, searchEntities } from "@/lib/server/qloo";
 
 const TYPES: Record<string, string[]> = {
-  all: [ENTITY_TYPES.artist, ENTITY_TYPES.movie, ENTITY_TYPES.book, ENTITY_TYPES.tv_show, ENTITY_TYPES.place],
+  all: [ENTITY_TYPES.artist, ENTITY_TYPES.movie, ENTITY_TYPES.book, ENTITY_TYPES.tv_show, ENTITY_TYPES.place, "urn:entity:podcast"],
   artist: [ENTITY_TYPES.artist],
-  movie: [ENTITY_TYPES.movie, ENTITY_TYPES.tv_show],
+  movie: [ENTITY_TYPES.movie],
+  tv_show: [ENTITY_TYPES.tv_show],
   book: [ENTITY_TYPES.book],
+  podcast: ["urn:entity:podcast"],
   place: [ENTITY_TYPES.place],
 };
 

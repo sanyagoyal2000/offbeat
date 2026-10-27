@@ -16,7 +16,7 @@ import { cityById } from "@/lib/locations";
 import { creditFor } from "@/lib/photoCredits";
 import { track } from "@/lib/server/analytics";
 import { feeRuleFor, getEvent, getOrganizer, soldMaps } from "@/lib/server/catalog";
-import { currentUid } from "@/lib/server/identity";
+import { currentUser } from "@/lib/server/identity";
 import { savedIds } from "@/lib/server/saved";
 import { getTaste, mappingsFor, rankByTaste } from "@/lib/server/taste";
 
@@ -58,8 +58,8 @@ export default async function EventPage({ params, searchParams }: { params: Prom
   const sp = await searchParams;
   const event = await getEvent(id);
   if (!event || event.status === "archived") notFound();
-  const uid = await currentUid();
-  const [organizer, sold, saved, taste, boards] = await Promise.all([getOrganizer(event.organizerId), soldMaps([event]), savedIds(uid), getTaste(uid), listBoards(uid)]);
+  const { uid, account } = await currentUser();
+  const [organizer, sold, saved, taste, boards] = await Promise.all([getOrganizer(event.organizerId), soldMaps([event]), savedIds(uid), getTaste(uid), account ? listBoards(uid) : []]);
   const isDraft = event.status === "draft";
   if (!isDraft) await track({ kind: "view", eventId: event.id, uid, source: "real" });
 
@@ -138,7 +138,7 @@ export default async function EventPage({ params, searchParams }: { params: Prom
             <div className="mt-3 flex flex-wrap gap-2">
               <SaveButton eventId={event.id} title={event.title} initial={saved.has(event.id)} variant="pill" />
               <ShareButton title={event.title} path={`/events/${event.id}${session ? `?session=${session.id}` : ""}`} />
-              {!isDraft && <AddToBoard eventId={event.id} boards={boards.filter((b) => b.cityId === event.cityId).map((b) => ({ id: b.id, name: b.name, has: b.items.some((i) => i.eventId === event.id) }))} />}
+              {!isDraft && <AddToBoard eventId={event.id} boards={boards.filter((b) => b.cityId === event.cityId).map((b) => ({ id: b.id, name: b.name, has: b.items.some((i) => i.eventId === event.id) }))} signedIn={!!account} autoOpen={sp.plan === "1"} />}
             </div>
           </header>
 

@@ -1,14 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-
-/** Anonymous, cookie-based identity for the demo (no accounts). */
-export const UID_COOKIE = "ob_uid";
+import { GUEST_ID, UID_COOKIE, newGuestId } from "@/lib/guestId";
 
 export function middleware(req: NextRequest) {
-  if (req.cookies.get(UID_COOKIE)) return NextResponse.next();
-  const uid = `u_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
+  // Only well-formed guest ids are accepted; anything else is replaced with a fresh one.
+  if (GUEST_ID.test(req.cookies.get(UID_COOKIE)?.value ?? "")) return NextResponse.next();
+  const uid = newGuestId();
   // Make the id visible to this same request's server components and route handlers.
   const headers = new Headers(req.headers);
-  headers.set("cookie", `${req.headers.get("cookie") ? `${req.headers.get("cookie")}; ` : ""}${UID_COOKIE}=${uid}`);
+  const others = (req.headers.get("cookie") ?? "").split(/;\s*/).filter((c) => c && !c.startsWith(`${UID_COOKIE}=`));
+  headers.set("cookie", [...others, `${UID_COOKIE}=${uid}`].join("; "));
   const res = NextResponse.next({ request: { headers } });
   res.cookies.set(UID_COOKIE, uid, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
   return res;

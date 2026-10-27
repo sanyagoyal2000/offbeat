@@ -169,6 +169,44 @@ async function main() {
     if (loc) console.log(`      matched locality: ${JSON.stringify(loc).slice(0, 200)}`);
   }
 
+  // 6. Taste-page suggestions, per tab type (reported, not counted as failures: some are optional).
+  const TAB_TYPES = ["artist", "movie", "tv_show", "book", "podcast", "place"];
+  const optional = async (label: string, path: string, params: Record<string, string>) => {
+    const r = await call(path, params);
+    const list = entitiesOf(r.body);
+    const ok = r.status >= 200 && r.status < 300 && list.length > 0;
+    console.log(`${ok ? "OK  " : "NONE"}  HTTP ${r.status}  ${r.ms} ms  ${label}: ${list.length} results`);
+    console.log(`      ${r.url.replace(BASE, "")}`);
+    if (list.length) console.log(`      ${list.slice(0, 8).map((e) => `${e.name}${e.properties?.image?.url ? "" : " (no image)"}${e.popularity !== undefined ? ` p=${Number(e.popularity).toFixed(2)}` : ""}`).join(" · ")}`);
+    else console.log(`      body: ${r.text.slice(0, 200)}`);
+    return list;
+  };
+
+  header("6a. Popular in city: signal.location.query + filter.popularity.min");
+  for (const t of TAB_TYPES) {
+    await optional(`${t} in Bengaluru`, "/v2/insights", { "filter.type": `urn:entity:${t}`, "signal.location.query": "Bengaluru", "filter.popularity.min": "0.8", take: "12" });
+  }
+  await optional("artist in Bengaluru, no popularity filter", "/v2/insights", { "filter.type": "urn:entity:artist", "signal.location.query": "Bengaluru", take: "12" });
+
+  header("6b. Trending: /v2/trending (needs signal + dates)");
+  const end = new Date().toISOString().slice(0, 10);
+  const start = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+  for (const t of ["artist", "movie", "tv_show"]) {
+    await optional(`trending ${t}`, "/v2/trending", { "filter.type": `urn:entity:${t}`, "signal.interests.entities": ids, "filter.start_date": start, "filter.end_date": end, take: "8" });
+  }
+
+  header("6c. Trending fallback: /v2/insights bias.trends=high");
+  for (const t of TAB_TYPES) {
+    await optional(`${t} bias.trends=high`, "/v2/insights", { "filter.type": `urn:entity:${t}`, "signal.location.query": "Bengaluru", "bias.trends": "high", take: "8" });
+  }
+
+  header("6d. More like this: signal.interests.entities + explainability + exclude");
+  for (const t of ["artist", "movie", "tv_show", "book"]) {
+    const list = await optional(`more ${t}`, "/v2/insights", { "filter.type": `urn:entity:${t}`, "signal.interests.entities": ids, "filter.exclude.entities": ids, "feature.explainability": "true", take: "4" });
+    const ex = list[0]?.query?.explainability;
+    if (ex) console.log(`      explainability[0]: ${JSON.stringify(ex).slice(0, 200)}`);
+  }
+
   console.log(`\n${failures === 0 ? "All checks passed." : `${failures} check(s) failed.`}`);
   process.exit(failures === 0 ? 0 : 1);
 }
